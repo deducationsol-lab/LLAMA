@@ -32,3 +32,23 @@ Then open the Vite app in your browser.
 ```bash
 npm run build
 ```
+
+## Environment Variables
+
+Create a `.env` file in the project root:
+
+```bash
+VITE_API_URL=http://localhost:8080
+```
+
+The backend server should also have its own `.env` file in `server/.env` with:
+
+```bash
+PORT=8080
+CORS_ORIGIN=http://localhost:5173
+LLAMA_STACK_URL=
+LLAMA_MODEL=meta-llama/Llama-3.3-70B-Instruct
+LLAMA_API_KEY=
+```
+
+Keep Llama credentials server-side only. The browser should only ever know the API URL.
