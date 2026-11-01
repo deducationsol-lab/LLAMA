@@ -1,0 +1,134 @@
+// server/llama.js
+// Try Llama Stack first; if unavailable, fall back to a local rule engine.
+// This keeps the hackathon demo resilient and never hard-fails.
+
+const DEFAULT_SYSTEM = `
+You are the Everyday Life Swarm orchestrator.
+Your job is to help a family manage:
+- travel and vacation planning
+- bills and recurring payments
+- grocery planning and pantry optimization
+- daily routine scheduling
+
+Be practical, concise, and budget-aware.
+Return short, useful results in plain English.
+`;
+
+export async function askLlama(system, user) {
+  const base = process.env.LLAMA_STACK_URL;
+  if (!base) return null;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    const res = await fetch(`${base.replace(/\/$/, '')}/v1/chat/completions`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(process.env.LLAMA_API_KEY
+          ? { Authorization: `Bearer ${process.env.LLAMA_API_KEY}` }
+          : {}),
+      },
+      body: JSON.stringify({
+        model: process.env.LLAMA_MODEL || 'meta-llama/Llama-3.3-70B-Instruct',
+        temperature: 0.3,
+        max_tokens: 300,
+        messages: [
+          { role: 'system', content: system || DEFAULT_SYSTEM },
+          { role: 'user', content: user },
+        ],
+      }),
+    });
+
+    clearTimeout(timeout);
+
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    return data?.choices?.[0]?.message?.content?.trim() || null;
+  } catch (error) {
+    return null;
+  }
+}
+
+export function fallbackPlanner({ prompt, bills = [], groceries = [], travel = [], preferences = {} }) {
+  const lower = (prompt || '').toLowerCase();
+
+  if (lower.includes('trip') || lower.includes('penang') || lower.includes('flight') || lower.includes('holiday')) {
+    const total = travel.reduce((sum, item) => sum + Number(item.cost || 0), 0);
+    const cap = Number(preferences.travelBudgetLimit || 1500);
+
+    return {
+      action: 'trip',
+      summary:
+        total > cap
+          ? `Penang trip is over budget. Current total is RM ${total.toFixed(2)} against a cap of RM ${cap.toFixed(2)}.`
+          : `Penang trip is within budget. Current total is RM ${total.toFixed(2)} against a cap of RM ${cap.toFixed(2)}.`,
+      nextStep: 'Optimize dates, choose cheaper flights, and keep souvenir spend capped.',
+    };
+  }
+
+  if (lower.includes('bill') || lower.includes('payment') || lower.includes('finance') || lower.includes('fee')) {
+    const pending = bills.filter((b) => b.status === 'PENDING');
+    const total = pending.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+
+    return {
+      action: 'bills',
+      summary: `You have ${pending.length} pending bill(s) totaling RM ${total.toFixed(2)}.`,
+      nextStep: 'Prioritize due dates and schedule payment reminders two days before each due date.',
+    };
+  }
+
+  if (lower.includes('grocery') || lower.includes('pantry') || lower.includes('shopping')) {
+    const toBuy = groceries.filter((g) => !g.inPantry);
+    const total = toBuy.reduce((sum, item) => sum + Number(item.estPrice || 0), 0);
+
+    return {
+      action: 'groceries',
+      summary: `You need ${toBuy.length} grocery item(s) for the basket, totaling RM ${total.toFixed(2)}.`,
+      nextStep: 'Use pantry inventory to avoid duplicate purchases and align with dietary preferences.',
+    };
+  }
+
+  if (lower.includes('sleep') || lower.includes('routine') || lower.includes('schedule') || lower.includes('calendar')) {
+    return {
+      action: 'schedule',
+      summary: 'The routine is already aligned with a sleep-friendly schedule and a low-friction family flow.',
+      nextStep: 'Add a 15-minute transition buffer before key activities to reduce stress.',
+    };
+  }
+
+  return {
+    action: 'general',
+    summary: 'The swarm reviewed the family context and recommended a coordinated next step.',
+    nextStep: 'Check the active workflow and let the agents re-prioritize based on the latest context.',
+  };
+}
+
+export async function runLLAMA(prompt, context = {}) {
+  const system = context.system || DEFAULT_SYSTEM;
+
+  const direct = await askLlama(system, prompt);
+  if (direct) {
+    return {
+      source: 'llama-stack',
+      response: direct,
+    };
+  }
+
+  const fallback = fallbackPlanner({
+    prompt,
+    bills: context.bills || [],
+    groceries: context.groceries || [],
+    travel: context.travel || [],
+    preferences: context.preferences || {},
+  });
+
+  return {
+    source: 'rule-engine',
+    response: `${fallback.summary} ${fallback.nextStep}`,
+    action: fallback.action,
+  };
+}

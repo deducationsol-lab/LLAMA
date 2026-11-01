@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: llama-life-swarm-api
+    env: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: CORS_ORIGIN
+        value: https://your-vercel-app.vercel.app
+      - key: LLAMA_STACK_URL
+        value: ""
+      - key: LLAMA_MODEL
+        value: meta-llama/Llama-3.3-70B-Instruct
+      - key: LLAMA_API_KEY
+        value: ""
