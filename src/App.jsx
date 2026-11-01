@@ -628,9 +628,13 @@ export default function App() {
           }}
           aria-label="LLAMA overview"
         >
-          <span className="brand-icon">
-            <Zap size={23} fill="currentColor" />
-          </span>
+          <img
+            className="brand-logo"
+            src="/llama-logo.png"
+            alt=""
+            width="48"
+            height="48"
+          />
           llama<span className="brand-dot">.</span>
         </a>
         <p className="sidebar-caption">A little help. A lot more life.</p>

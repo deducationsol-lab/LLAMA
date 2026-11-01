@@ -111,15 +111,12 @@ input::placeholder {
   letter-spacing: -2px;
   line-height: 1;
 }
-.brand-icon {
-  display: grid;
-  place-items: center;
-  background: var(--purple);
-  color: #e5fa8a;
-  width: 39px;
-  height: 39px;
-  border-radius: 12px;
-  transform: rotate(-7deg);
+.brand-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 13px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 .brand-dot {
   color: var(--purple);
@@ -1436,13 +1433,10 @@ td {
   .brand {
     font-size: 31px;
   }
-  .brand-icon {
-    width: 31px;
-    height: 31px;
-    border-radius: 9px;
-  }
-  .brand-icon svg {
-    width: 19px;
+  .brand-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
   }
   .sidebar-caption,
   .nav-label,
