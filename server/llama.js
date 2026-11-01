@@ -1,5 +1,3 @@
-import LlamaAPIClient from "llama-api-client";
-
 export class AgentError extends Error {
   constructor(status, code, message) {
     super(message);
@@ -8,38 +6,34 @@ export class AgentError extends Error {
   }
 }
 
+const MUSE_BASE_URL = "https://api.meta.ai/v1";
+const MUSE_CHAT_PATH = "/chat/completions";
+const MUSE_MODEL_ID = "muse-spark-1.3";
+
 export function configuration(env = process.env) {
-  const provider = env.LLAMA_PROVIDER || "llama";
-  const missing = ["LLAMA_API_KEY", "LLAMA_MODEL", "LLAMA_ACCESS_CODE"].filter(
+  const missing = ["MODEL_API_KEY", "HOUSEHOLD_ACCESS_CODE"].filter(
     (key) => !env[key]?.trim(),
   );
   if (
-    env.LLAMA_ACCESS_CODE &&
-    (env.LLAMA_ACCESS_CODE.length < 16 || env.LLAMA_ACCESS_CODE.length > 256)
+    env.HOUSEHOLD_ACCESS_CODE &&
+    (env.HOUSEHOLD_ACCESS_CODE.length < 16 ||
+      env.HOUSEHOLD_ACCESS_CODE.length > 256)
   )
-    missing.push("LLAMA_ACCESS_CODE (16–256 characters)");
-  if (provider === "openai-compatible" && !env.LLAMA_BASE_URL)
-    missing.push("LLAMA_BASE_URL");
-  if (!["llama", "openai-compatible"].includes(provider))
-    missing.push("LLAMA_PROVIDER (llama or openai-compatible)");
-  if (env.LLAMA_BASE_URL) {
-    try {
-      const url = new URL(env.LLAMA_BASE_URL);
-      if (
-        url.protocol !== "https:" ||
-        url.username ||
-        url.password ||
-        url.search ||
-        url.hash
-      )
-        throw new Error();
-    } catch {
-      missing.push(
-        "LLAMA_BASE_URL (HTTPS API base URL without credentials or query)",
-      );
-    }
-  }
-  return { configured: missing.length === 0, provider, missing };
+    missing.push("HOUSEHOLD_ACCESS_CODE (16–256 characters)");
+  // This integration sends credentials only to Meta's documented origin and route.
+  if (
+    env.MUSE_BASE_URL &&
+    env.MUSE_BASE_URL.replace(/\/$/, "") !== MUSE_BASE_URL
+  )
+    missing.push("MUSE_BASE_URL (must be https://api.meta.ai/v1)");
+  if (env.MUSE_CHAT_PATH && env.MUSE_CHAT_PATH !== MUSE_CHAT_PATH)
+    missing.push("MUSE_CHAT_PATH (must be /chat/completions)");
+  return {
+    configured: missing.length === 0,
+    provider: "Meta Muse",
+    model: env.MUSE_MODEL_ID?.trim() || MUSE_MODEL_ID,
+    missing,
+  };
 }
 
 const ROLES = {
@@ -172,7 +166,7 @@ export async function runAgent(
     throw new AgentError(
       503,
       "not_configured",
-      "Llama is not connected. Complete the server-side API setup.",
+      "Meta Muse is not connected to LLAMA. Complete the server-side API setup.",
     );
   const task = selectTask(input.task, input.prompt);
   const [agent, instruction] = ROLES[task];
@@ -187,64 +181,47 @@ export async function runAgent(
     },
   ];
   try {
-    let answer;
-    if (config.provider === "llama") {
-      const client = new LlamaAPIClient({
-        apiKey: env.LLAMA_API_KEY,
-        baseURL: env.LLAMA_BASE_URL || "https://api.llama.com/v1",
-        timeout: 25000,
-        maxRetries: 0,
-        fetch: (url, options) =>
-          fetchImpl(url, { ...options, redirect: "error" }),
-      });
-      const data = await client.chat.completions.create({
-        model: env.LLAMA_MODEL,
+    const response = await fetchImpl(`${MUSE_BASE_URL}${MUSE_CHAT_PATH}`, {
+      method: "POST",
+      redirect: "error",
+      signal: AbortSignal.timeout(25000),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.MODEL_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: config.model,
         messages,
         max_completion_tokens: 1200,
-        temperature: 0.3,
-      });
-      answer = data?.completion_message?.content?.text;
-    } else {
-      const response = await fetchImpl(
-        `${env.LLAMA_BASE_URL.replace(/\/$/, "")}/chat/completions`,
-        {
-          method: "POST",
-          redirect: "error",
-          signal: AbortSignal.timeout(25000),
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${env.LLAMA_API_KEY}`,
-          },
-          body: JSON.stringify({
-            model: env.LLAMA_MODEL,
-            messages,
-            max_tokens: 1200,
-            temperature: 0.3,
-          }),
-        },
+        reasoning_effort: "low",
+      }),
+    });
+    if (!response.ok) throw { status: response.status };
+    const data = await response.json();
+    const choice = data?.choices?.[0];
+    if (choice?.finish_reason === "length")
+      throw new AgentError(
+        502,
+        "output_limit",
+        "Muse reached the response token limit. Try a shorter, more focused request.",
       );
-      if (!response.ok) throw { status: response.status };
-      const data = await response.json();
-      answer = data?.choices?.[0]?.message?.content;
-    }
+    const answer = choice?.message?.content;
     if (typeof answer !== "string" || !answer.trim())
       throw new AgentError(
         502,
         "invalid_response",
-        "The model returned no usable text. Check the API protocol and model ID.",
+        "The model returned no usable text. Check the Muse model ID and API setup.",
       );
     return {
       task,
       agent,
       source: config.provider,
-      model: env.LLAMA_MODEL,
+      model: config.model,
       answer: answer.trim().slice(0, 12000),
     };
   } catch (error) {
     if (error instanceof AgentError) throw error;
     if (
-      error instanceof LlamaAPIClient.APIConnectionTimeoutError ||
-      error.cause?.name === "TimeoutError" ||
       error.name === "TimeoutError" ||
       error.name === "AbortError" ||
       /timeout/i.test(error.name)
@@ -269,7 +246,7 @@ export async function runAgent(
     throw new AgentError(
       502,
       "provider_error",
-      "The model request failed. Check the API base URL, protocol and model ID.",
+      "The model request failed. Check the Meta Model API key and Muse model access.",
     );
   }
 }

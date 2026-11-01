@@ -38,13 +38,13 @@ export function createHandler({
         throw new AgentError(
           503,
           "not_configured",
-          "Llama is not connected. Complete the server-side API setup.",
+          "Meta Muse is not connected to LLAMA. Complete the server-side API setup.",
         );
       const access = req.headers["x-llama-access-code"];
       if (
         typeof access !== "string" ||
         access.length > 256 ||
-        !timingSafeEqual(digest(access), digest(env.LLAMA_ACCESS_CODE))
+        !timingSafeEqual(digest(access), digest(env.HOUSEHOLD_ACCESS_CODE))
       )
         throw new AgentError(
           401,

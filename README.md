@@ -4,7 +4,7 @@
   <img src="public/llama-logo.png" alt="LLAMA mascot: a blue llama with orange ears and a lightning-bolt medallion" width="220" height="220" />
 </p>
 
-**A little help. A lot more life.** A React + Vite household dashboard with a server-side Llama planning endpoint. Four specialist roles cover travel, bills, pantry/meal planning, and daily routines; a coordinator routes general requests. These are role prompts using one configured model, not four autonomous services or connected external networks.
+**A little help. A lot more life.** A React + Vite household dashboard with a server-side Meta Muse planning endpoint. Four specialist roles cover travel, bills, pantry/meal planning, and daily routines; a coordinator routes general requests. These are role prompts using one configured model, not four autonomous services or connected external networks.
 
 ## What works now
 
@@ -15,19 +15,23 @@
 - Missing setup, invalid access, provider authentication/quota failures, timeouts and empty responses are shown as errors. There is no simulated-success fallback or background model polling.
 - The activity feed records actual requests/results and explicit manual bill edits, not fabricated external tool calls. Agent cards describe roles, not invented CPU usage or processing statistics.
 
-## Connect the API later
+## Connect Meta Muse to LLAMA
 
 Do **not** paste credentials into chat, the browser, a commit, or a `VITE_` variable.
 
-| Server variable     | Purpose                                                                                                                                                                                                                   |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `LLAMA_PROVIDER`    | `llama` for the official Llama API protocol (default), or `openai-compatible` for a provider explicitly documenting that protocol.                                                                                        |
-| `LLAMA_API_KEY`     | Your provider-issued API key. Store as a Secret.                                                                                                                                                                          |
-| `LLAMA_MODEL`       | The exact model ID available to your account. No assumed model default.                                                                                                                                                   |
-| `LLAMA_BASE_URL`    | Optional for `llama` (official SDK default is `https://api.llama.com/v1`). Required for `openai-compatible`; use the provider's full API base including `/v1` where needed. HTTPS only, no embedded credentials or query. |
-| `LLAMA_ACCESS_CODE` | A separate private demo password, 16–256 characters. Store as a Secret. Never use your API key here.                                                                                                                      |
+**LLAMA is this independent everyday-life project**, built for the Meta hackathon’s Build for Your World track. **Meta Muse is its model provider**, not the project name and not Meta's separate Llama API.
 
-Meta Model API, Llama API, and Llama Stack are distinct services. Before adding your hackathon key, verify the **endpoint, model ID and request/response protocol** against its documentation. This adapter supports the official [Llama API SDK](https://github.com/meta-llama/llama-api-typescript) and OpenAI-compatible chat completions; it does not assume a different Meta Model API is interchangeable.
+| Server variable         | Purpose                                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------------------------- |
+| `MUSE_API_DOCS_URL`     | Public reference: `https://dev.meta.ai/docs/` (documentation only).                               |
+| `MUSE_MODELS_URL`       | Public reference: `https://dev.meta.ai/docs/models` (documentation only).                         |
+| `MUSE_BASE_URL`         | `https://api.meta.ai/v1` (default; other origins rejected).                                       |
+| `MUSE_CHAT_PATH`        | `/chat/completions` (default; other routes rejected).                                             |
+| `MUSE_MODEL_ID`         | `muse-spark-1.3` (default; change only to a model available to your account).                     |
+| `MODEL_API_KEY`         | Secret Meta Model API bearer key. Never commit a value.                                           |
+| `HOUSEHOLD_ACCESS_CODE` | Separate private demo password, 16–256 characters. Store as a Secret; never use the API key here. |
+
+Public `MUSE_*` settings can be committed in `.env.example`. **Do not put `MODEL_API_KEY` in the frontend or a `VITE_` variable.** The API calls Meta's documented OpenAI-compatible endpoint and reads `choices[0].message.content`. It uses `max_completion_tokens: 1200`, `reasoning_effort: low`, and leaves temperature unset per [Meta's Chat Completions documentation](https://dev.meta.ai/docs/protocols/chat-completions). Truncated, empty, authentication, quota and timeout responses show an error rather than a fabricated success. There is no call to Meta's Llama API or the former Llama SDK.
 
 ### On Vercel
 
@@ -36,7 +40,7 @@ The existing Vite project serves its frontend and the Node handler in `api/agent
 1. Open your project, then **Environment Variables** in the sidebar. Add the variables above for the intended Preview branch/environment first. Use the **Secret** type for the API key and demo access code. See [Vercel environment-variable documentation](https://vercel.com/docs/environment-variables/managing-environment-variables) and [Secret types](https://vercel.com/docs/environment-variables/sensitive-environment-variables).
 2. Create a new deployment/redeploy after saving; existing deployments don't acquire new values.
 3. Click **Recheck API**. “API configured” means the settings are present, **not** that credentials or model access have been verified.
-4. Enter only the separate household demo access code in the app. Submit a small request such as “Suggest a dinner using our pantry.” A successful response shows the agent role, configured model and provider protocol.
+4. Enter only the separate household demo access code (not `MODEL_API_KEY`) in the app. Submit a small request such as “Suggest a dinner using our pantry.” A successful response shows the agent role, configured model and provider protocol.
 5. Keep the preview/access code private and set provider-side quota/spend controls before sharing with judges. If secrets differ between Preview and Production, use each environment's own values.
 
 All Vercel configuration changes and deployments require the project's normal approval flow. This repository does not set credentials or promote production automatically.
@@ -47,8 +51,8 @@ Use Node 26 (the linked project's runtime). From the repository root:
 
 ```bash
 npm install
-cp .env.example .env.local
-# Fill .env.local privately with the provider settings and a separate demo access code.
+cp server/.env.example server/.env
+# Fill server/.env privately with MODEL_API_KEY and HOUSEHOLD_ACCESS_CODE.
 npm run dev:api
 ```
 
@@ -58,7 +62,7 @@ In a second terminal:
 npm run dev
 ```
 
-Vite runs at `http://localhost:3000` and proxies `/api` to `127.0.0.1:8080`. The API uses the same handler as Vercel. Restart `dev:api` after changing environment variables. `npm start` starts only the standalone API, not the frontend. An optional Render blueprint is included for API-only hosting; the default frontend intentionally uses same-origin requests and does not automatically connect to Render.
+Vite runs at `http://localhost:3000` and proxies `/api` to `127.0.0.1:8080`. The API uses the same handler as Vercel. Restart `dev:api` after changing environment variables. Root `.env.local` is also supported for local development; `server/.env` is loaded afterward. Hosting-injected environment variables take precedence. `npm start` starts only the standalone API, not the frontend. An optional Render blueprint is included for API-only hosting; the default frontend intentionally uses same-origin requests and does not automatically connect to Render.
 
 ## Checks
 
@@ -67,7 +71,7 @@ npm run check:agent
 npm run build
 ```
 
-The focused regression script exercises both provider protocols with fake provider responses and the real HTTP handler: configuration, input bounds, role selection, authentication, sanitized failures, quota and timeout handling, and burst limits. It never needs a real key or makes external model calls. A live credentialed response must still be verified after setup.
+The focused regression script exercises Meta Muse requests with fake provider responses and the real HTTP handler: configuration, exact endpoint/model/auth and token parameters, input bounds, role selection, authentication, sanitized failures, truncated output, quota and timeout handling, and burst limits. It never needs a real key or makes external model calls. A live credentialed response must still be verified after setup.
 
 ## Demo security and limitations
 

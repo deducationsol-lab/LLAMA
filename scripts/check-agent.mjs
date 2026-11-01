@@ -11,10 +11,9 @@ import {
 import { createHandler } from "../api/agent.js";
 
 const env = {
-  LLAMA_API_KEY: randomBytes(24).toString("hex"),
-  LLAMA_ACCESS_CODE: randomBytes(24).toString("hex"),
-  LLAMA_MODEL: "example-model",
-  LLAMA_PROVIDER: "llama",
+  MODEL_API_KEY: randomBytes(24).toString("hex"),
+  HOUSEHOLD_ACCESS_CODE: randomBytes(24).toString("hex"),
+  MUSE_MODEL_ID: "muse-spark-1.3",
 };
 const input = validateInput({
   task: "general",
@@ -30,7 +29,7 @@ assert.equal(input.context.unexpected, undefined);
 assert.equal(configuration({}).configured, false);
 assert.equal(configuration(env).configured, true);
 assert.equal(
-  configuration({ ...env, LLAMA_BASE_URL: "http://unsafe.invalid" }).configured,
+  configuration({ ...env, MUSE_BASE_URL: "http://unsafe.invalid" }).configured,
   false,
 );
 assert.equal(selectTask("general", "review bills"), "bills");
@@ -52,39 +51,60 @@ assert.throws(
 let calls = 0;
 const fakeFetch = async (url, options) => {
   calls++;
-  assert.equal(String(url), "https://api.llama.com/v1/chat/completions");
+  assert.equal(url, "https://api.meta.ai/v1/chat/completions");
+  assert.equal(options.redirect, "error");
+  assert.equal(options.headers.Authorization, `Bearer ${env.MODEL_API_KEY}`);
   const body = JSON.parse(options.body);
-  assert.equal(body.model, env.LLAMA_MODEL);
+  assert.equal(body.model, env.MUSE_MODEL_ID);
   assert.equal(body.max_completion_tokens, 1200);
+  assert.equal(body.max_tokens, undefined);
+  assert.equal(body.temperature, undefined);
+  assert.equal(body.reasoning_effort, "low");
   assert.match(body.messages[0].content, /No tools are connected/);
   assert.match(body.messages[1].content, /Halal/);
-  assert.ok(!JSON.stringify(body).includes(env.LLAMA_API_KEY));
+  assert.ok(!JSON.stringify(body).includes(env.MODEL_API_KEY));
   return Response.json({
-    completion_message: {
-      content: { type: "text", text: "Use rice from the pantry." },
-    },
+    choices: [
+      {
+        finish_reason: "stop",
+        message: { content: "Use rice from the pantry." },
+      },
+    ],
   });
 };
-const native = await runAgent(input, { env, fetchImpl: fakeFetch });
-assert.equal(native.agent, "HOME-03");
-assert.equal(native.answer, "Use rice from the pantry.");
+const result = await runAgent(input, { env, fetchImpl: fakeFetch });
+assert.equal(result.agent, "HOME-03");
+assert.equal(result.answer, "Use rice from the pantry.");
+assert.equal(result.source, "Meta Muse");
 assert.equal(calls, 1);
-const compatible = await runAgent(input, {
-  env: {
-    ...env,
-    LLAMA_PROVIDER: "openai-compatible",
-    LLAMA_BASE_URL: "https://example.invalid/v1/",
-  },
-  fetchImpl: async (url, options) => {
-    assert.equal(url, "https://example.invalid/v1/chat/completions");
-    assert.equal(JSON.parse(options.body).max_tokens, 1200);
-    assert.equal(options.redirect, "error");
-    return Response.json({
-      choices: [{ message: { content: "A meal proposal." } }],
-    });
-  },
-});
-assert.equal(compatible.answer, "A meal proposal.");
+assert.equal(
+  configuration({
+    MODEL_API_KEY: env.MODEL_API_KEY,
+    HOUSEHOLD_ACCESS_CODE: env.HOUSEHOLD_ACCESS_CODE,
+  }).model,
+  "muse-spark-1.3",
+);
+assert.equal(
+  configuration({ ...env, MUSE_BASE_URL: "https://example.invalid/v1" })
+    .configured,
+  false,
+);
+assert.equal(
+  configuration({ ...env, MUSE_CHAT_PATH: "//example.invalid" }).configured,
+  false,
+);
+await assert.rejects(
+  runAgent(input, {
+    env,
+    fetchImpl: async () =>
+      Response.json({
+        choices: [
+          { finish_reason: "length", message: { content: "Incomplete" } },
+        ],
+      }),
+  }),
+  (e) => e.code === "output_limit",
+);
 for (const [status, code] of [
   [401, "provider_auth"],
   [403, "provider_auth"],
@@ -141,7 +161,7 @@ const request = (body, headers = {}) =>
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "X-Llama-Access-Code": env.LLAMA_ACCESS_CODE,
+      "X-Llama-Access-Code": env.HOUSEHOLD_ACCESS_CODE,
       ...headers,
     },
     body: typeof body === "string" ? body : JSON.stringify(body),
@@ -151,8 +171,8 @@ try {
   const statusText = await status.text();
   assert.equal(status.status, 200);
   assert.equal(status.headers.get("cache-control"), "no-store");
-  assert.ok(!statusText.includes(env.LLAMA_API_KEY));
-  assert.ok(!statusText.includes(env.LLAMA_ACCESS_CODE));
+  assert.ok(!statusText.includes(env.MODEL_API_KEY));
+  assert.ok(!statusText.includes(env.HOUSEHOLD_ACCESS_CODE));
   assert.equal(
     (await request({ prompt: "hi" }, { "X-Llama-Access-Code": "" })).status,
     401,
@@ -178,5 +198,5 @@ try {
   await new Promise((resolve) => server.close(resolve));
 }
 console.log(
-  "Agent regression checks passed: native and compatible protocols, validation, auth, redacted failures, limits, and real HTTP routing. No external calls made.",
+  "Agent regression checks passed: Meta Muse protocol, validation, auth, redacted failures, limits, and real HTTP routing. No external calls made.",
 );

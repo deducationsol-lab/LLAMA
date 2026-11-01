@@ -319,7 +319,7 @@ export default function App() {
     setAgentError("");
     if (!connection.configured) {
       setAgentError(
-        "Llama is not connected yet. Complete the server-side setup shown here, then recheck. No model request was sent.",
+        "Meta Muse is not connected yet. Complete the server-side setup shown here, then recheck. No model request was sent.",
       );
       return;
     }
@@ -520,7 +520,7 @@ export default function App() {
             More living.
           </strong>
           <p>Your four-agent team has the everyday covered.</p>
-          <span>Powered by Llama household agents</span>
+          <span>LLAMA · powered by Meta Muse</span>
         </div>
         <div className="household">
           <span className="avatar">KL</span>
@@ -636,7 +636,7 @@ export default function App() {
           <section
             className="panel api-setup"
             ref={feedbackRef}
-            aria-label="Llama API connection"
+            aria-label="Meta Muse connection for LLAMA"
           >
             <div className="panel-heading">
               <div>
@@ -644,8 +644,8 @@ export default function App() {
                   {connection.loading
                     ? "Checking API setup…"
                     : connection.configured
-                      ? "API configured · access code required"
-                      : "Llama is not connected yet"}
+                      ? "Meta Muse configured · access code required"
+                      : "Meta Muse is not connected yet"}
                 </h2>
                 <p>
                   Requests send the household data shown here to your configured
@@ -693,8 +693,8 @@ export default function App() {
             )}
             {isRunning && (
               <p className="agent-working" role="status">
-                Llama is preparing a suggestion… No household records will be
-                changed.
+                Meta Muse is preparing a suggestion for LLAMA… No household
+                records will be changed.
               </p>
             )}
             {agentError && (
@@ -1349,7 +1349,9 @@ travel_cap: ${rm(userPreferences.travelBudgetLimit)}
             Made for the beautifully busy everyday
             <span className="purple-text">.</span>
           </span>
-          <span>Llama agents · Sample data · Changes reset on refresh</span>
+          <span>
+            LLAMA · Meta Muse · Sample data · Changes reset on refresh
+          </span>
         </footer>
       </div>
     </div>
