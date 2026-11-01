@@ -1,19 +1,22 @@
+# Optional standalone API deployment. Vercel already serves /api/agent with the frontend.
+# The frontend uses same-origin /api/agent; using Render requires a same-origin proxy.
 services:
   - type: web
     name: llama-life-swarm-api
-    env: node
+    runtime: node
     plan: free
-    rootDir: server
     buildCommand: npm install
     startCommand: npm start
     envVars:
-      - key: PORT
-        value: 8080
-      - key: CORS_ORIGIN
-        value: https://your-vercel-app.vercel.app
-      - key: LLAMA_STACK_URL
-        value: ""
-      - key: LLAMA_MODEL
-        value: meta-llama/Llama-3.3-70B-Instruct
-      - key: LLAMA_API_KEY
-        value: ""
+      - key: HOST
+        value: 0.0.0.0
+      - key: MUSE_BASE_URL
+        value: https://api.meta.ai/v1
+      - key: MUSE_CHAT_PATH
+        value: /chat/completions
+      - key: MUSE_MODEL_ID
+        value: muse-spark-1.3
+      - key: MODEL_API_KEY
+        sync: false
+      - key: HOUSEHOLD_ACCESS_CODE
+        sync: false
