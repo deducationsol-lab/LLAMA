@@ -16,6 +16,8 @@ import {
   Trash2,
   Plus,
   AlertCircle,
+  ArrowUpRight,
+  Asterisk,
 } from "lucide-react";
 
 const nowTime = () => new Date().toTimeString().slice(0, 8);
@@ -699,7 +701,7 @@ export default function App() {
                   currentTab.label
                 )}
                 <span className="heading-spark" aria-hidden="true">
-                  ✳
+                  <Asterisk size={32} />
                 </span>
               </h1>
               <p>
@@ -765,7 +767,9 @@ export default function App() {
                 <strong>{value}</strong>
                 <span className="stat-sub">
                   {sub}
-                  <span aria-hidden="true">↗</span>
+                  <span aria-hidden="true">
+                    <ArrowUpRight size={16} />
+                  </span>
                 </span>
               </button>
             ))}
@@ -816,8 +820,12 @@ export default function App() {
                 </div>
                 <div className="hero-art" aria-hidden="true">
                   <span className="art-orbit" />
-                  <span className="art-star star-one">✳</span>
-                  <span className="art-star star-two">✦</span>
+                  <span className="art-star star-one">
+                    <Asterisk size={40} />
+                  </span>
+                  <span className="art-star star-two">
+                    <Sparkles size={23} />
+                  </span>
                   <div className="art-card art-trip">
                     <Plane size={24} />
                     <span>Next stop</span>
@@ -876,7 +884,7 @@ export default function App() {
                         <span>{detail}</span>
                       </div>
                       <span className="quick-arrow" aria-hidden="true">
-                        ↗
+                        <ArrowUpRight size={16} />
                       </span>
                     </button>
                   ))}
@@ -955,7 +963,10 @@ export default function App() {
                       placeholder="Try “add salmon to grocery list”"
                     />
                     <button className="button primary" type="submit">
-                      Send <span aria-hidden="true">↗</span>
+                      Send{" "}
+                      <span aria-hidden="true">
+                        <ArrowUpRight size={16} />
+                      </span>
                     </button>
                   </form>
                 </section>
