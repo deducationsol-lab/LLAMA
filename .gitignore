@@ -3,3 +3,9 @@ node_modules
 dist
 .vite
 .DS_Store
+
+# Credentials stay local; commit only blank examples.
+.env
+.env.*
+!.env.example
+.vercel

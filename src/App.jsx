@@ -5,8 +5,6 @@ import {
   Receipt,
   ShoppingCart,
   Clock,
-  Play,
-  Pause,
   RotateCcw,
   CheckCircle2,
   Brain,
@@ -26,95 +24,42 @@ const rm = (n) => `RM ${Number(n).toFixed(2)}`;
 
 const INITIAL_AGENTS = [
   {
-    id: "agent-travel",
+    id: "travel",
     name: "LOGISTICS-01",
     role: "Travel & Vacation Planner",
-    status: "ACTIVE",
     color: "indigo",
     icon: Plane,
-    activity: "Querying flights & school holiday calendars for Penang trip...",
-    load: 38,
-    processedEvents: 1420,
-    skills: [
-      "School Holiday Alignment",
-      "Flights API Tool",
-      "Itinerary Builder",
-    ],
+    activity:
+      "Itineraries, budget estimates and questions to check before booking.",
+    skills: ["Travel proposals", "Budget planning"],
   },
   {
-    id: "agent-admin",
+    id: "bills",
     name: "ADMIN-02",
     role: "Life Admin & Bill Manager",
-    status: "ACTIVE",
     color: "amber",
     icon: Receipt,
-    activity: "Parsing electricity & internet invoice cycles...",
-    load: 54,
-    processedEvents: 3210,
-    skills: [
-      "Bill Recurrence OCR",
-      "Due-Date Forecasting",
-      "Budget Reconciliation",
-    ],
+    activity: "Bill summaries and payment priorities. No bank connection.",
+    skills: ["Bill review", "Cashflow advice"],
   },
   {
-    id: "agent-home",
+    id: "groceries",
     name: "HOME-03",
-    role: "Pantry RAG & Grocery Agent",
-    status: "THINKING",
+    role: "Pantry & Grocery Agent",
     color: "emerald",
     icon: ShoppingCart,
-    activity: "Cross-referencing recipes with Pantry Vector RAG...",
-    load: 82,
-    processedEvents: 4590,
-    skills: ["Pantry Vector RAG", "Grocery Builder", "Dietary Guard"],
+    activity:
+      "Meal suggestions and shopping ideas based on the pantry you supply.",
+    skills: ["Pantry context", "Meal ideas"],
   },
   {
-    id: "agent-routine",
+    id: "schedule",
     name: "ROUTINE-04",
     role: "Routine & Wellness Scheduler",
-    status: "READY",
     color: "sky",
     icon: Clock,
-    activity: "Calculating optimal 8-hr sleep window & time-blocks...",
-    load: 22,
-    processedEvents: 2100,
-    skills: [
-      "Conflict-Free Timeblocker",
-      "Bedtime Optimizer",
-      "School Run Resolver",
-    ],
-  },
-];
-
-const INITIAL_LOGS = [
-  {
-    id: 1,
-    time: "08:15:02",
-    agent: "LOGISTICS-01",
-    type: "TOOL",
-    msg: 'llama_stack.call_tool("google_flights_search", { destination: "PEN" })',
-  },
-  {
-    id: 2,
-    time: "08:15:06",
-    agent: "ADMIN-02",
-    type: "SUCCESS",
-    msg: "Detected upcoming utility bill: Tenaga Nasional (RM 185.00) due in 4 days.",
-  },
-  {
-    id: 3,
-    time: "08:15:10",
-    agent: "HOME-03",
-    type: "TOOL",
-    msg: 'vector_rag.query("pantry_inventory", { query: "milk, eggs, spices, chicken" })',
-  },
-  {
-    id: 4,
-    time: "08:15:14",
-    agent: "ROUTINE-04",
-    type: "ACTION",
-    msg: "Adjusted target bedtime to 22:30 based on early morning flight departure.",
+    activity: "Balanced time blocks and routines. No calendar integration.",
+    skills: ["Routine proposals", "Time blocks"],
   },
 ];
 
@@ -123,23 +68,23 @@ const INITIAL_TRAVEL = [
     day: "Day 1",
     title: "Arrival & Georgetown Heritage Walk",
     cost: 350,
-    status: "Booked",
+    status: "Sample",
     notes:
-      "Morning flight MH-1142. Check-in at Eastern & Oriental. Dinner at Gurney Drive.",
+      "Example only: explore Georgetown and local food. Flights and accommodation are not booked.",
   },
   {
     day: "Day 2",
     title: "Penang Hill Funicular & Entopia Butterfly Park",
     cost: 420,
-    status: "Planned",
+    status: "Sample",
     notes:
-      "Kids school holiday discount applied. Pre-purchased fast-track tickets.",
+      "Example only: consider Penang Hill and Entopia. Verify opening times, ticket prices and school dates.",
   },
   {
     day: "Day 3",
     title: "Batu Ferringhi Beach & Culinary Souvenirs",
     cost: 380,
-    status: "Planned",
+    status: "Sample",
     notes: "Seafood lunch at Teluk Bahang, souvenirs at Chowrasta Market.",
   },
 ];
@@ -152,7 +97,7 @@ const INITIAL_BILLS = [
     dueDate: "Nov 05",
     status: "PENDING",
     category: "Utilities",
-    agentNote: "Auto-debit scheduled",
+    agentNote: "Sample bill · no bank connected",
   },
   {
     id: 2,
@@ -170,7 +115,7 @@ const INITIAL_BILLS = [
     dueDate: "Nov 01",
     status: "PAID",
     category: "Education",
-    agentNote: "Verified receipt #994",
+    agentNote: "Sample paid status · not verified",
   },
   {
     id: 4,
@@ -179,7 +124,7 @@ const INITIAL_BILLS = [
     dueDate: "Nov 12",
     status: "PENDING",
     category: "Finance",
-    agentNote: "Sufficient balance in main account",
+    agentNote: "Sample bill · balance not checked",
   },
 ];
 
@@ -273,20 +218,16 @@ const INITIAL_SCHEDULE = [
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("feeds");
-  const [logs, setLogs] = useState(INITIAL_LOGS);
+  const [logs, setLogs] = useState([]);
   const [autoScroll, setAutoScroll] = useState(true);
-  const [isSimulating, setIsSimulating] = useState(true);
   const [customPrompt, setCustomPrompt] = useState("");
   const [newGrocery, setNewGrocery] = useState("");
 
-  const [agents, setAgents] = useState(INITIAL_AGENTS);
-  const [travelItinerary, setTravelItinerary] = useState(INITIAL_TRAVEL);
+  const agents = INITIAL_AGENTS;
+  const [travelItinerary] = useState(INITIAL_TRAVEL);
   const [bills, setBills] = useState(INITIAL_BILLS);
   const [groceries, setGroceries] = useState(INITIAL_GROCERIES);
   const [schedule] = useState(INITIAL_SCHEDULE);
-
-  const [ragVectors, setRagVectors] = useState(1420);
-  const [timeSaved, setTimeSaved] = useState(14.5);
 
   const [userPreferences, setUserPreferences] = useState({
     familySize: 4,
@@ -334,174 +275,155 @@ export default function App() {
       logBoxRef.current.scrollTop = logBoxRef.current.scrollHeight;
   }, [logs, autoScroll]);
 
+  const [connection, setConnection] = useState({
+    configured: false,
+    loading: true,
+    missing: [],
+  });
+  const [accessCode, setAccessCode] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
+  const [agentResult, setAgentResult] = useState(null);
+  const [agentError, setAgentError] = useState("");
+  const [hasConnected, setHasConnected] = useState(false);
+  const requestInFlight = useRef(false);
+  const feedbackRef = useRef(null);
   useEffect(() => {
-    if (!isSimulating) return;
-    const pool = [
-      {
-        agent: "LOGISTICS-01",
-        type: "TOOL",
-        msg: 'llama_stack.call_tool("weather_forecast_api", { location: "Penang", days: 3 })',
-      },
-      {
-        agent: "ADMIN-02",
-        type: "SUCCESS",
-        msg: "Reconciled e-Wallet balance against recurring weekly grocery budget.",
-      },
-      {
-        agent: "HOME-03",
-        type: "INFO",
-        msg: "Updated Vector RAG store with fresh items added to refrigerator.",
-      },
-      {
-        agent: "ROUTINE-04",
-        type: "ACTION",
-        msg: "Optimized calendar buffer: Added 15m transition slot before afternoon work block.",
-      },
-      {
-        agent: "HOME-03",
-        type: "TOOL",
-        msg: `vector_rag.query("pantry_inventory", { filter: "Dietary: ${userPreferences.dietary}" })`,
-      },
-      {
-        agent: "ADMIN-02",
-        type: "INFO",
-        msg: `Cashflow forecast: ${rm(pendingTotal)} pending before Nov 15.`,
-      },
-    ];
-    const id = setInterval(() => {
-      if (Math.random() > 0.4)
-        pushLogs([pool[Math.floor(Math.random() * pool.length)]]);
-      setAgents((prev) =>
-        prev.map((a) => ({
-          ...a,
-          load: Math.max(
-            8,
-            Math.min(96, a.load + Math.round((Math.random() - 0.5) * 18)),
-          ),
-          processedEvents: a.processedEvents + Math.floor(Math.random() * 4),
-        })),
+    if (agentError || agentResult || isRunning)
+      feedbackRef.current?.scrollIntoView({ block: "start" });
+  }, [agentError, agentResult, isRunning]);
+
+  const checkConnection = async (signal) => {
+    try {
+      const response = await fetch("/api/agent", { signal });
+      if (!response.ok) throw new Error();
+      const data = await response.json();
+      setConnection({ ...data, loading: false });
+    } catch (error) {
+      if (error.name !== "AbortError")
+        setConnection({
+          configured: false,
+          loading: false,
+          missing: [],
+          unavailable: true,
+        });
+    }
+  };
+  useEffect(() => {
+    const controller = new AbortController();
+    checkConnection(controller.signal);
+    return () => controller.abort();
+  }, []);
+
+  const runHouseholdAgent = async (task, prompt) => {
+    if (requestInFlight.current) return;
+    setAgentError("");
+    if (!connection.configured) {
+      setAgentError(
+        "Llama is not connected yet. Complete the server-side setup shown here, then recheck. No model request was sent.",
       );
-    }, 2500);
-    return () => clearInterval(id);
-  }, [isSimulating, pendingTotal, userPreferences.dietary]);
-
-  const triggerTripWorkflow = () => {
+      return;
+    }
+    if (!accessCode.trim()) {
+      setAgentError(
+        "Enter your household demo access code below. Never enter your Meta API key in this app.",
+      );
+      return;
+    }
+    requestInFlight.current = true;
+    setIsRunning(true);
+    setAgentResult(null);
     pushLogs([
       {
-        agent: "LOGISTICS-01",
-        type: "TOOL",
-        msg: `⚡ WORKFLOW: "Plan Penang Trip under ${rm(userPreferences.travelBudgetLimit)}"`,
-      },
-      {
-        agent: "LOGISTICS-01",
-        type: "TOOL",
-        msg: 'llama_stack.call_tool("google_flights", { origin: "KUL", dest: "PEN", price_cap: 400 })',
-      },
-      {
-        agent: "ROUTINE-04",
-        type: "SUCCESS",
-        msg: "Cross-referenced school holiday dates (Nov 18-24). Flight slots available.",
-      },
-      {
-        agent: "ADMIN-02",
-        type: "ACTION",
-        msg: `Budget check: itinerary total must stay ≤ ${rm(userPreferences.travelBudgetLimit)}.`,
+        agent: "COORDINATOR",
+        type: "INFO",
+        msg: `Requesting a ${task === "general" ? "household" : task} suggestion. No records will be changed.`,
       },
     ]);
-    setTravelItinerary([
-      {
-        day: "Day 1",
-        title: "Morning Flight & Georgetown Heritage Walk",
-        cost: 310,
-        status: "Booked",
-        notes: "Flight MH-1142 confirmed. Lunch at Line Clear Nasi Kandar.",
-      },
-      {
-        day: "Day 2",
-        title: "Penang Hill Funicular & Entopia Park",
-        cost: 390,
-        status: "Booked",
-        notes: "Family ticket deal applied. Evening dinner at Gurney Drive.",
-      },
-      {
-        day: "Day 3",
-        title: "Teluk Bahang Beach & Souvenirs",
-        cost: 320,
-        status: "Planned",
-        notes: "Checked-out. Souvenirs within budget.",
-      },
-    ]);
-    setTimeSaved((h) => +(h + 0.5).toFixed(1));
-    setActiveTab("travel");
-  };
-
-  const triggerBillsWorkflow = () => {
-    pushLogs([
-      {
-        agent: "ADMIN-02",
-        type: "TOOL",
-        msg: '⚡ WORKFLOW: "Reconcile Monthly Bills & Cashflow Forecast"',
-      },
-      {
-        agent: "ADMIN-02",
-        type: "SUCCESS",
-        msg: `${bills.length} bills analyzed. Pending: ${rm(pendingTotal)} across ${pendingBills.length} items.`,
-      },
-      {
-        agent: "ROUTINE-04",
-        type: "ACTION",
-        msg: "Set payment reminder alerts 2 days prior to each due date.",
-      },
-    ]);
-    setActiveTab("bills");
-  };
-
-  const triggerGroceryWorkflow = () => {
-    pushLogs([
-      {
-        agent: "HOME-03",
-        type: "TOOL",
-        msg: '⚡ WORKFLOW: "Weekly Meal & Grocery RAG Optimization"',
-      },
-      {
-        agent: "HOME-03",
-        type: "TOOL",
-        msg: `vector_rag.query("household_pantry", { filter: "Dietary: ${userPreferences.dietary}" })`,
-      },
-      {
-        agent: "HOME-03",
-        type: "SUCCESS",
-        msg: `Meal plan generated. ${groceries.filter((g) => g.inPantry).length} items already in pantry, ${basket.length} to buy (${rm(basketTotal)}).`,
-      },
-    ]);
-    setRagVectors((v) => v + groceries.length);
-    setActiveTab("groceries");
-  };
-
-  const toggleBill = (id) => {
-    const bill = bills.find((b) => b.id === id);
-    setBills((prev) =>
-      prev.map((b) =>
-        b.id === id
-          ? { ...b, status: b.status === "PAID" ? "PENDING" : "PAID" }
-          : b,
-      ),
-    );
-    if (bill)
+    try {
+      const response = await fetch("/api/agent", {
+        method: "POST",
+        signal: AbortSignal.timeout(35000),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Llama-Access-Code": accessCode,
+        },
+        body: JSON.stringify({
+          task,
+          prompt,
+          context: {
+            preferences: userPreferences,
+            bills,
+            groceries,
+            travel: travelItinerary,
+            schedule,
+          },
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        if (response.status === 503) checkConnection();
+        throw new Error(data.error || "The model request failed. Try again.");
+      }
+      if (typeof data.answer !== "string" || !data.answer.trim())
+        throw new Error("The model returned no usable suggestion.");
+      setAgentResult(data);
+      setHasConnected(true);
       pushLogs([
         {
-          agent: "ADMIN-02",
-          type: "ACTION",
-          msg: `"${bill.name}" marked ${bill.status === "PAID" ? "PENDING" : "PAID"} (${rm(bill.amount)}).`,
+          agent: data.agent,
+          type: "SUCCESS",
+          msg: "Model suggestion received. Review it above; no actions have been executed.",
         },
       ]);
+      setCustomPrompt("");
+    } catch (error) {
+      const message = ["AbortError", "TimeoutError"].includes(error.name)
+        ? "The request timed out. Please try again."
+        : error.message;
+      setAgentError(message);
+      pushLogs([{ agent: "COORDINATOR", type: "ERROR", msg: message }]);
+    } finally {
+      requestInFlight.current = false;
+      setIsRunning(false);
+    }
   };
 
+  const triggerTripWorkflow = () =>
+    runHouseholdAgent(
+      "travel",
+      "Suggest a three-day Penang family itinerary within our travel budget. Show estimated costs and what needs checking. Do not book anything.",
+    );
+  const triggerBillsWorkflow = () =>
+    runHouseholdAgent(
+      "bills",
+      "Review our household bills, summarize unpaid totals and suggest payment priorities. Do not make payments or set reminders.",
+    );
+  const triggerGroceryWorkflow = () =>
+    runHouseholdAgent(
+      "groceries",
+      "Suggest meals and a grocery list using our pantry, dietary preferences and budget. Distinguish pantry items from suggested purchases.",
+    );
+
+  const toggleBill = (id) => {
+    setBills((prev) =>
+      prev.map((bill) =>
+        bill.id === id
+          ? { ...bill, status: bill.status === "PAID" ? "PENDING" : "PAID" }
+          : bill,
+      ),
+    );
+    pushLogs([
+      {
+        agent: "ADMIN-02",
+        type: "ACTION",
+        msg: "Bill status changed manually in this browser session. No payment was made.",
+      },
+    ]);
+  };
   const togglePantry = (id) =>
     setGroceries((prev) =>
       prev.map((g) => (g.id === id ? { ...g, inPantry: !g.inPantry } : g)),
     );
-
   const addGrocery = (name, price = 15) => {
     if (!name.trim()) return;
     setGroceries((prev) => [
@@ -512,80 +434,13 @@ export default function App() {
         category: "Custom",
         inPantry: false,
         estPrice: price,
-        recipeNeeded: "Added via prompt",
+        recipeNeeded: "Added manually · estimated price",
       },
     ]);
-    setRagVectors((v) => v + 1);
   };
-
   const handleCustomPromptSubmit = (e) => {
-    e?.preventDefault();
-    const text = customPrompt.trim();
-    if (!text) return;
-    const lower = text.toLowerCase();
-    pushLogs([
-      { agent: "ADMIN-02", type: "TOOL", msg: `✨ CUSTOM PROMPT: "${text}"` },
-    ]);
-
-    const addMatch = lower.match(/add (.+?)( to|$)/);
-    if (
-      lower.includes("grocery") ||
-      lower.includes("basket") ||
-      lower.includes("shopping") ||
-      addMatch
-    ) {
-      addGrocery(
-        addMatch
-          ? addMatch[1]
-          : text.replace(/add|to.*list/gi, "").trim() || "New grocery item",
-      );
-      pushLogs([
-        {
-          agent: "HOME-03",
-          type: "SUCCESS",
-          msg: "Item added to basket and indexed in Pantry RAG.",
-        },
-      ]);
-      setActiveTab("groceries");
-    } else if (
-      lower.includes("penang") ||
-      lower.includes("trip") ||
-      lower.includes("flight") ||
-      lower.includes("holiday")
-    ) {
-      triggerTripWorkflow();
-    } else if (
-      lower.includes("bill") ||
-      lower.includes("tuition") ||
-      lower.includes("fee") ||
-      lower.includes("pay")
-    ) {
-      triggerBillsWorkflow();
-    } else if (
-      lower.includes("sleep") ||
-      lower.includes("schedule") ||
-      lower.includes("routine") ||
-      lower.includes("calendar")
-    ) {
-      pushLogs([
-        {
-          agent: "ROUTINE-04",
-          type: "SUCCESS",
-          msg: `Routine checked against ${userPreferences.targetSleepDuration} sleep target. No conflicts.`,
-        },
-      ]);
-      setActiveTab("schedule");
-    } else {
-      pushLogs([
-        {
-          agent: "LOGISTICS-01",
-          type: "SUCCESS",
-          msg: "Swarm evaluated multi-agent dependencies and re-calculated optimal execution path.",
-        },
-      ]);
-      setActiveTab("feeds");
-    }
-    setCustomPrompt("");
+    e.preventDefault();
+    if (customPrompt.trim()) runHouseholdAgent("general", customPrompt.trim());
   };
 
   const TABS = [
@@ -665,7 +520,7 @@ export default function App() {
             More living.
           </strong>
           <p>Your four-agent team has the everyday covered.</p>
-          <span>Powered by Meta Llama 3.3</span>
+          <span>Powered by Llama household agents</span>
         </div>
         <div className="household">
           <span className="avatar">KL</span>
@@ -687,7 +542,7 @@ export default function App() {
             <strong>{currentTab.label}</strong>
           </div>
           <span className="demo-badge">
-            <span /> Interactive demo
+            <span /> Sample household data
           </span>
         </header>
         <main id="main-content" tabIndex={-1}>
@@ -716,11 +571,10 @@ export default function App() {
             </div>
             <button
               className="button loop-button"
-              onClick={() => setIsSimulating((s) => !s)}
-              aria-pressed={isSimulating}
+              onClick={() => checkConnection()}
+              disabled={isRunning}
             >
-              {isSimulating ? <Pause size={15} /> : <Play size={15} />}
-              {isSimulating ? "Pause demo" : "Resume demo"}
+              <RotateCcw size={15} /> Recheck API
             </button>
           </section>
 
@@ -735,11 +589,11 @@ export default function App() {
                 tab: "bills",
               },
               {
-                label: "Time back this week",
+                label: "Daily routine",
                 icon: Clock,
                 tone: "lime",
-                value: `${timeSaved} hrs`,
-                sub: "Demo estimate · more you-time",
+                value: `${schedule.length} blocks`,
+                sub: "Your sample schedule",
                 tab: "schedule",
               },
               {
@@ -751,12 +605,12 @@ export default function App() {
                 tab: "groceries",
               },
               {
-                label: "Household memory",
+                label: "Already in pantry",
                 icon: Brain,
                 tone: "butter",
-                value: ragVectors.toLocaleString(),
-                sub: "Demo vectors · made for your family",
-                tab: "lab",
+                value: `${groceries.filter((g) => g.inPantry).length} items`,
+                sub: "From your household list",
+                tab: "groceries",
               },
             ].map(({ label, icon: Icon, tone, value, sub, tab }) => (
               <button
@@ -778,6 +632,95 @@ export default function App() {
               </button>
             ))}
           </section>
+
+          <section
+            className="panel api-setup"
+            ref={feedbackRef}
+            aria-label="Llama API connection"
+          >
+            <div className="panel-heading">
+              <div>
+                <h2>
+                  {connection.loading
+                    ? "Checking API setup…"
+                    : connection.configured
+                      ? "API configured · access code required"
+                      : "Llama is not connected yet"}
+                </h2>
+                <p>
+                  Requests send the household data shown here to your configured
+                  model provider. Responses are suggestions only.
+                </p>
+              </div>
+              <span className="status-pill">
+                {hasConnected
+                  ? "Response received"
+                  : "No verified model response yet"}
+              </span>
+            </div>
+            {!connection.loading && !connection.configured && (
+              <div className="setup-details">
+                <p>
+                  {connection.unavailable
+                    ? "API unavailable. Locally, start npm run dev:api alongside npm run dev."
+                    : `Set these server-only variables, then redeploy: ${connection.missing.join(", ")}.`}
+                </p>
+                <p>
+                  Never use a VITE_ prefix for secrets. See the README for setup
+                  and supported API protocols.
+                </p>
+              </div>
+            )}
+            {connection.configured && (
+              <div className="access-field">
+                <label htmlFor="access-code">
+                  Household demo access code (not your Meta API key)
+                </label>
+                <input
+                  id="access-code"
+                  type="password"
+                  autoComplete="off"
+                  value={accessCode}
+                  maxLength={256}
+                  onChange={(e) => setAccessCode(e.target.value)}
+                  placeholder="Shared privately by the project owner"
+                />
+                <p>
+                  This code stays in memory only. Keep it private; it grants
+                  access to billable model requests.
+                </p>
+              </div>
+            )}
+            {isRunning && (
+              <p className="agent-working" role="status">
+                Llama is preparing a suggestion… No household records will be
+                changed.
+              </p>
+            )}
+            {agentError && (
+              <p className="agent-error" role="alert">
+                {agentError}
+              </p>
+            )}
+          </section>
+          {agentResult && (
+            <section className="panel agent-answer" aria-live="polite">
+              <div className="panel-heading">
+                <div>
+                  <h2>{agentResult.agent} · suggestion</h2>
+                  <p>
+                    Model: {agentResult.model} · Provider: {agentResult.source}
+                  </p>
+                </div>
+                <Sparkles size={23} />
+              </div>
+              <div className="answer-text">{agentResult.answer}</div>
+              <p className="answer-caveat">
+                Review estimates and details. Nothing was booked, paid,
+                purchased, scheduled or automatically changed.
+              </p>
+            </section>
+          )}
 
           {(overTravelBudget || overMonthlyCap) && (
             <div className="budget-alert" role="status">
@@ -818,6 +761,7 @@ export default function App() {
                   <button
                     className="button hero-button"
                     onClick={triggerTripWorkflow}
+                    disabled={isRunning}
                   >
                     Let’s plan a getaway <Plane size={17} />
                   </button>
@@ -879,7 +823,12 @@ export default function App() {
                       action: triggerGroceryWorkflow,
                     },
                   ].map(({ title, detail, icon: Icon, tone, action }) => (
-                    <button className="quick-card" key={title} onClick={action}>
+                    <button
+                      className="quick-card"
+                      key={title}
+                      onClick={action}
+                      disabled={isRunning}
+                    >
                       <span className={`quick-icon ${tone}`}>
                         <Icon size={22} />
                       </span>
@@ -903,10 +852,10 @@ export default function App() {
                       <p>Your team’s activity, in one place.</p>
                     </div>
                     <span
-                      className={`status-pill ${isSimulating ? "running" : ""}`}
+                      className={`status-pill ${isRunning ? "running" : ""}`}
                     >
                       <span />
-                      {isSimulating ? "Simulating" : "Paused"}
+                      {isRunning ? "Working" : "Idle"}
                     </span>
                   </div>
                   <div className="feed-tools">
@@ -923,13 +872,15 @@ export default function App() {
                   <div
                     className="feed-list"
                     ref={logBoxRef}
-                    aria-label="Demo agent activity"
+                    aria-label="Agent request activity"
                   >
                     {logs.length === 0 ? (
                       <div className="empty-state">
                         <Terminal size={27} />
                         <strong>A fresh start.</strong>
-                        <p>Your next demo activity will show up here.</p>
+                        <p>
+                          Your actual requests and results will show up here.
+                        </p>
                       </div>
                     ) : (
                       logs.map((log) => {
@@ -964,9 +915,15 @@ export default function App() {
                       aria-label="Ask your team"
                       value={customPrompt}
                       onChange={(e) => setCustomPrompt(e.target.value)}
-                      placeholder="Try “add salmon to grocery list”"
+                      placeholder="Ask about meals, travel, bills or routines…"
+                      maxLength={2000}
+                      disabled={isRunning}
                     />
-                    <button className="button primary" type="submit">
+                    <button
+                      className="button primary"
+                      type="submit"
+                      disabled={isRunning}
+                    >
                       Send{" "}
                       <span aria-hidden="true">
                         <ArrowUpRight size={16} />
@@ -978,7 +935,7 @@ export default function App() {
                   <div className="panel-heading">
                     <div>
                       <h2>Meet your team</h2>
-                      <p>Four specialists. One everyday.</p>
+                      <p>Four roles, routed to one configured model.</p>
                     </div>
                     <span className="team-count">04</span>
                   </div>
@@ -995,28 +952,14 @@ export default function App() {
                             <span>{agent.name}</span>
                           </div>
                           <span className="agent-status">
-                            {isSimulating
-                              ? agent.status.toLowerCase()
-                              : "paused"}
+                            {isRunning
+                              ? "request active"
+                              : connection.configured
+                                ? "configured"
+                                : "not connected"}
                           </span>
                         </div>
                         <p>{agent.activity}</p>
-                        <div
-                          className={`load-track ${agent.color}`}
-                          role="meter"
-                          aria-label={`${agent.name} demo load`}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-valuenow={agent.load}
-                        >
-                          <span style={{ width: `${agent.load}%` }} />
-                        </div>
-                        <div className="agent-foot">
-                          <span>{agent.load}% demo load</span>
-                          <span>
-                            {agent.processedEvents.toLocaleString()} events
-                          </span>
-                        </div>
                         <div className="skill-tags">
                           {agent.skills.map((skill) => (
                             <span key={skill}>{skill}</span>
@@ -1044,8 +987,9 @@ export default function App() {
                 <button
                   className="button primary"
                   onClick={triggerTripWorkflow}
+                  disabled={isRunning}
                 >
-                  <Sparkles size={16} /> Re-optimize trip
+                  <Sparkles size={16} /> Suggest a trip
                 </button>
               </div>
               <div className="budget-line">
@@ -1102,8 +1046,12 @@ export default function App() {
                     {rm(userPreferences.monthlyBudgetCap)}
                   </p>
                 </div>
-                <button className="button dark" onClick={triggerBillsWorkflow}>
-                  <RotateCcw size={16} /> Scan bill cycles
+                <button
+                  className="button dark"
+                  onClick={triggerBillsWorkflow}
+                  disabled={isRunning}
+                >
+                  <RotateCcw size={16} /> Review bills
                 </button>
               </div>
               <div
@@ -1175,8 +1123,9 @@ export default function App() {
                 <button
                   className="button dark"
                   onClick={triggerGroceryWorkflow}
+                  disabled={isRunning}
                 >
-                  <Sparkles size={16} /> Generate list
+                  <Sparkles size={16} /> Suggest meals & groceries
                 </button>
               </div>
               <form
@@ -1253,8 +1202,9 @@ export default function App() {
                   </span>
                   <h3>A pantry that remembers.</h3>
                   <p>
-                    Your demo home agent checks what’s already in stock, so you
-                    don’t double up.
+                    Your supplied pantry list is sent as context when you ask
+                    the home agent for suggestions. No vector database is
+                    connected.
                   </p>
                   <dl>
                     <div>
@@ -1270,10 +1220,6 @@ export default function App() {
                     <div>
                       <dt>Basket estimate</dt>
                       <dd>{rm(basketTotal)}</dd>
-                    </div>
-                    <div>
-                      <dt>Memory vectors</dt>
-                      <dd>{ragVectors.toLocaleString()}</dd>
                     </div>
                   </dl>
                 </aside>
@@ -1322,7 +1268,10 @@ export default function App() {
                 <div className="panel-heading">
                   <div>
                     <h2>A little more you.</h2>
-                    <p>Give your demo team the bigger picture.</p>
+                    <p>
+                      Share preferences with your configured model when you send
+                      a request.
+                    </p>
                   </div>
                   <Brain size={25} />
                 </div>
@@ -1363,15 +1312,15 @@ export default function App() {
                 </div>
                 <p className="memory-note">
                   <Sparkles size={17} />
-                  Changes update your budgets and pantry preferences instantly
-                  in this session.
+                  Changes update your session budgets and the preferences shared
+                  with the model in this session.
                 </p>
               </div>
               <div className="panel prompt-preview">
                 <div className="panel-heading">
                   <div>
                     <h2>Behind the everyday</h2>
-                    <p>Your generated Llama 3.3 system prompt.</p>
+                    <p>Household context used for planning.</p>
                   </div>
                   <Terminal size={22} />
                 </div>
@@ -1400,7 +1349,7 @@ travel_cap: ${rm(userPreferences.travelBudgetLimit)}
             Made for the beautifully busy everyday
             <span className="purple-text">.</span>
           </span>
-          <span>Meta Llama 3.3 · Demo data · Changes reset on refresh</span>
+          <span>Llama agents · Sample data · Changes reset on refresh</span>
         </footer>
       </div>
     </div>
