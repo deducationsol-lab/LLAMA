@@ -1965,3 +1965,111 @@ button:disabled {
   opacity: 0.6;
   transform: none;
 }
+
+.household-content {
+  padding: 0 22px 24px;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.household-content h3 {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 12px 0;
+}
+.household-form {
+  background: #f7f3fc;
+  padding: 20px;
+  border-radius: 12px;
+  margin: 18px 0;
+}
+.household-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  margin-bottom: 15px;
+}
+.household-form input,
+.household-form select {
+  min-width: 0;
+  width: 100%;
+  padding: 11px;
+  border: 1px solid #ded4e9;
+  border-radius: 8px;
+  background: white;
+  color: #262329;
+  font: inherit;
+}
+.household-form p,
+.household-content .view-note {
+  font-size: 11px;
+  line-height: 1.8;
+}
+.household-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.household-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0;
+}
+.household-actions .button {
+  white-space: normal;
+  text-align: left;
+}
+.shared-record {
+  border: 1px solid #e7e0ed;
+  border-radius: 10px;
+  padding: 15px;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.shared-record p,
+.shared-record time {
+  font-size: 11px;
+  color: #716375;
+}
+.invite-code {
+  background: #f9edb9;
+  padding: 16px;
+  border-radius: 10px;
+  margin: 16px 0;
+}
+.invite-code code {
+  display: block;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.member-identity {
+  overflow-wrap: anywhere;
+  font-size: 11px;
+  color: #716375;
+}
+@media (max-width: 600px) {
+  .household-columns {
+    grid-template-columns: 1fr;
+  }
+  .household-content {
+    padding: 0 14px 20px;
+  }
+  .household-form {
+    padding: 15px;
+  }
+}
+.member-name {
+  display: block;
+  margin: 18px 0;
+  font-size: 12px;
+}
+.member-name input {
+  display: block;
+  width: min(100%, 420px);
+  padding: 10px;
+  border: 1px solid #ded4e9;
+  border-radius: 8px;
+  margin-top: 6px;
+  background: white;
+}

@@ -1,0 +1,17 @@
+{
+  "id": "/",
+  "name": "LLAMA Everyday Household",
+  "short_name": "LLAMA",
+  "start_url": "/#household",
+  "display": "standalone",
+  "background_color": "#f8f7f3",
+  "theme_color": "#05234a",
+  "icons": [
+    {
+      "src": "/llama-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
