@@ -216,8 +216,12 @@ const INITIAL_SCHEDULE = [
   },
 ];
 
+import HouseholdPanel from "./HouseholdPanel";
+
 export default function App() {
-  const [activeTab, setActiveTab] = useState("feeds");
+  const [activeTab, setActiveTab] = useState(
+    location.hash === "#household" ? "household" : "feeds",
+  );
   const [logs, setLogs] = useState([]);
   const [autoScroll, setAutoScroll] = useState(true);
   const [customPrompt, setCustomPrompt] = useState("");
@@ -443,7 +447,15 @@ export default function App() {
     if (customPrompt.trim()) runHouseholdAgent("general", customPrompt.trim());
   };
 
+  useEffect(() => {
+    const openHousehold = () => {
+      if (location.hash === "#household") setActiveTab("household");
+    };
+    window.addEventListener("hashchange", openHousehold);
+    return () => window.removeEventListener("hashchange", openHousehold);
+  }, []);
   const TABS = [
+    { id: "household", label: "Shared household", icon: Receipt },
     { id: "feeds", label: "Overview", icon: Sparkles },
     {
       id: "travel",
@@ -578,7 +590,7 @@ export default function App() {
             </button>
           </section>
 
-          <section className="stats-grid" aria-label="Household summary">
+          <section className="stats-grid" aria-label="Sample household summary">
             {[
               {
                 label: "Bills to take care of",
@@ -633,6 +645,7 @@ export default function App() {
             ))}
           </section>
 
+          {activeTab === "household" && <HouseholdPanel />}
           <section
             className="panel api-setup"
             ref={feedbackRef}
