@@ -1,0 +1,6 @@
+{
+  "crons": [
+    { "path": "/api/household?action=dispatch", "schedule": "* * * * *" }
+  ],
+  "functions": { "api/household.js": { "maxDuration": 300 } }
+}
