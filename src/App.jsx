@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import HouseholdDemo from "./HouseholdDemo";
 import {
   Terminal,
   Plane,
@@ -16,6 +17,7 @@ import {
   AlertCircle,
   ArrowUpRight,
   Asterisk,
+  Users,
 } from "lucide-react";
 
 const nowTime = () => new Date().toTimeString().slice(0, 8);
@@ -216,7 +218,7 @@ const INITIAL_SCHEDULE = [
   },
 ];
 
-export default function App() {
+function Dashboard() {
   const [activeTab, setActiveTab] = useState("feeds");
   const [logs, setLogs] = useState([]);
   const [autoScroll, setAutoScroll] = useState(true);
@@ -494,6 +496,10 @@ export default function App() {
         </a>
         <p className="sidebar-caption">A little help. A lot more life.</p>
         <div className="nav-label">YOUR EVERYDAY</div>
+        <a className="nav-item" href="#demo">
+          <Users size={19} />
+          <span>Household demo</span>
+        </a>
         <nav aria-label="Main navigation">
           {TABS.map(({ id, label, icon: Icon, count }) => (
             <button
@@ -1356,4 +1362,17 @@ travel_cap: ${rm(userPreferences.travelBudgetLimit)}
       </div>
     </div>
   );
+}
+
+export default function App() {
+  const [isDemo, setIsDemo] = useState(location.hash === "#demo");
+  useEffect(() => {
+    const updateRoute = () => {
+      setIsDemo(location.hash === "#demo");
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener("hashchange", updateRoute);
+    return () => window.removeEventListener("hashchange", updateRoute);
+  }, []);
+  return isDemo ? <HouseholdDemo /> : <Dashboard />;
 }
