@@ -10,6 +10,8 @@
 
 ## 🚀 Live Demo & Resources
 - **Web App**: [https://llama-everyday.vercel.app/](https://llama-everyday.vercel.app/)
+
+HOUSEHOLD DEMO ACCESS CODE IS : METAHACKATHONLLAMA01
 - **Demo Video**: [Watch on YouTube](https://youtu.be/RMFK-iADpJE?si=aAjyI44PpvYHot2-)
 - **GitHub Repository**: [https://github.com/deducationsol-lab/LLAMA](https://github.com/deducationsol-lab/LLAMA)
 
