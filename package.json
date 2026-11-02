@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "dev:api": "node --env-file-if-exists=.env.local --env-file-if-exists=server/.env server/index.js",
     "start": "node --env-file-if-exists=.env.local --env-file-if-exists=server/.env server/index.js",
-    "check:agent": "node scripts/check-agent.mjs"
+    "check:agent": "node scripts/check-agent.mjs",
+    "check:demo": "node scripts/check-demo.mjs"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",
