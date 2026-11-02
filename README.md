@@ -84,3 +84,11 @@ The focused regression script exercises Meta Muse requests with fake provider re
 ## Project branding
 
 The app and README use the supplied mascot in `public/llama-logo.png`. Browser and Apple touch icons are alongside it. For GitHub link previews, manually upload `public/github-social-preview.png` (1280 × 640) under **Settings → Social preview → Edit → Upload an image**.
+
+## Hackathon video demo (no setup required)
+
+Open `/#demo` or select **Household demo** for a clearly labeled simulated two-member scenario: mark electricity paid, mark a Penang flight booked, schedule a school pickup and manually preview the reminder. Both simulated inboxes update in one browser tab. No real payments, tickets, phone pushes, accounts, shared database or AI inference are involved in this route. It uses session-only demo state and a reset button for repeatable takes. The existing live Meta Muse path remains separate. See the [three-minute recording guide](docs/demo-video.md). Check with `npm run check:demo`.
+
+## Shared households and Web Push (setup required)
+
+A new **Shared household** workspace adds separate accounts, private family invites, persistent shared bills/bookings/pickups, actor-attributed activity, and opt-in push/reminders. These shared records are separate from the original dashboard's local samples. Database migration, Auth setup and notification worker configuration are required before the feature is live. See [household setup and device testing](docs/households.md). Run `npm run check:household` for database-isolation and push-worker checks. Production should not be connected until a two-account/two-phone test passes.

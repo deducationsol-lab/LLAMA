@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import HouseholdDemo from "./HouseholdDemo";
 import {
   Terminal,
   Plane,
@@ -16,6 +17,7 @@ import {
   AlertCircle,
   ArrowUpRight,
   Asterisk,
+  Users,
 } from "lucide-react";
 
 const nowTime = () => new Date().toTimeString().slice(0, 8);
@@ -216,8 +218,15 @@ const INITIAL_SCHEDULE = [
   },
 ];
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState("feeds");
+import HouseholdPanel from "./HouseholdPanel";
+
+function Dashboard() {
+  const [activeTab, setActiveTab] = useState(
+    location.hash === "#household" ||
+      new URLSearchParams(location.search).get("household") === "1"
+      ? "household"
+      : "feeds",
+  );
   const [logs, setLogs] = useState([]);
   const [autoScroll, setAutoScroll] = useState(true);
   const [customPrompt, setCustomPrompt] = useState("");
@@ -443,7 +452,15 @@ export default function App() {
     if (customPrompt.trim()) runHouseholdAgent("general", customPrompt.trim());
   };
 
+  useEffect(() => {
+    const openHousehold = () => {
+      if (location.hash === "#household") setActiveTab("household");
+    };
+    window.addEventListener("hashchange", openHousehold);
+    return () => window.removeEventListener("hashchange", openHousehold);
+  }, []);
   const TABS = [
+    { id: "household", label: "Shared household", icon: Receipt },
     { id: "feeds", label: "Overview", icon: Sparkles },
     {
       id: "travel",
@@ -494,6 +511,14 @@ export default function App() {
         </a>
         <p className="sidebar-caption">A little help. A lot more life.</p>
         <div className="nav-label">YOUR EVERYDAY</div>
+        <a className="nav-item" href="#demo">
+          <Users size={19} />
+          <span>Household demo</span>
+        </a>
+        <a className="nav-item" href="#household">
+          <Users size={19} />
+          <span>Live household · sign in</span>
+        </a>
         <nav aria-label="Main navigation">
           {TABS.map(({ id, label, icon: Icon, count }) => (
             <button
@@ -578,150 +603,177 @@ export default function App() {
             </button>
           </section>
 
-          <section className="stats-grid" aria-label="Household summary">
-            {[
-              {
-                label: "Bills to take care of",
-                icon: Receipt,
-                tone: "peach",
-                value: rm(pendingTotal),
-                sub: `${pendingBills.length} pending bills`,
-                tab: "bills",
-              },
-              {
-                label: "Daily routine",
-                icon: Clock,
-                tone: "lime",
-                value: `${schedule.length} blocks`,
-                sub: "Your sample schedule",
-                tab: "schedule",
-              },
-              {
-                label: "Your grocery basket",
-                icon: ShoppingCart,
-                tone: "lavender",
-                value: rm(basketTotal),
-                sub: `${basket.length} items on your list`,
-                tab: "groceries",
-              },
-              {
-                label: "Already in pantry",
-                icon: Brain,
-                tone: "butter",
-                value: `${groceries.filter((g) => g.inPantry).length} items`,
-                sub: "From your household list",
-                tab: "groceries",
-              },
-            ].map(({ label, icon: Icon, tone, value, sub, tab }) => (
-              <button
-                className={`stat-card ${tone}`}
-                key={label}
-                onClick={() => setActiveTab(tab)}
+          {activeTab !== "household" && (
+            <>
+              <section
+                className="stats-grid"
+                aria-label="Sample household summary"
               >
-                <div className="stat-top">
-                  <span>{label}</span>
-                  <Icon size={19} />
-                </div>
-                <strong>{value}</strong>
-                <span className="stat-sub">
-                  {sub}
-                  <span aria-hidden="true">
-                    <ArrowUpRight size={16} />
-                  </span>
-                </span>
-              </button>
-            ))}
-          </section>
-
-          <section
-            className="panel api-setup"
-            ref={feedbackRef}
-            aria-label="Meta Muse connection for LLAMA"
-          >
-            <div className="panel-heading">
-              <div>
-                <h2>
-                  {connection.loading
-                    ? "Checking API setup…"
-                    : connection.configured
-                      ? "Meta Muse configured · access code required"
-                      : "Meta Muse is not connected yet"}
-                </h2>
-                <p>
-                  Requests send the household data shown here to your configured
-                  model provider. Responses are suggestions only.
-                </p>
-              </div>
-              <span className="status-pill">
-                {hasConnected
-                  ? "Response received"
-                  : "No verified model response yet"}
-              </span>
-            </div>
-            {!connection.loading && !connection.configured && (
-              <div className="setup-details">
-                <p>
-                  {connection.unavailable
-                    ? "API unavailable. Locally, start npm run dev:api alongside npm run dev."
-                    : `Set these server-only variables, then redeploy: ${connection.missing.join(", ")}.`}
-                </p>
-                <p>
-                  Never use a VITE_ prefix for secrets. See the README for setup
-                  and supported API protocols.
-                </p>
-              </div>
-            )}
-            {connection.configured && (
-              <div className="access-field">
-                <label htmlFor="access-code">
-                  Household demo access code (not your Meta API key)
-                </label>
-                <input
-                  id="access-code"
-                  type="password"
-                  autoComplete="off"
-                  value={accessCode}
-                  maxLength={256}
-                  onChange={(e) => setAccessCode(e.target.value)}
-                  placeholder="Shared privately by the project owner"
-                />
-                <p>
-                  This code stays in memory only. Keep it private; it grants
-                  access to billable model requests.
-                </p>
-              </div>
-            )}
-            {isRunning && (
-              <p className="agent-working" role="status">
-                Meta Muse is preparing a suggestion for LLAMA… No household
-                records will be changed.
-              </p>
-            )}
-            {agentError && (
-              <p className="agent-error" role="alert">
-                {agentError}
-              </p>
-            )}
-          </section>
-          {agentResult && (
-            <section className="panel agent-answer" aria-live="polite">
-              <div className="panel-heading">
-                <div>
-                  <h2>{agentResult.agent} · suggestion</h2>
-                  <p>
-                    Model: {agentResult.model} · Provider: {agentResult.source}
-                  </p>
-                </div>
-                <Sparkles size={23} />
-              </div>
-              <div className="answer-text">{agentResult.answer}</div>
-              <p className="answer-caveat">
-                Review estimates and details. Nothing was booked, paid,
-                purchased, scheduled or automatically changed.
-              </p>
-            </section>
+                {[
+                  {
+                    label: "Bills to take care of",
+                    icon: Receipt,
+                    tone: "peach",
+                    value: rm(pendingTotal),
+                    sub: `${pendingBills.length} pending bills`,
+                    tab: "bills",
+                  },
+                  {
+                    label: "Daily routine",
+                    icon: Clock,
+                    tone: "lime",
+                    value: `${schedule.length} blocks`,
+                    sub: "Your sample schedule",
+                    tab: "schedule",
+                  },
+                  {
+                    label: "Your grocery basket",
+                    icon: ShoppingCart,
+                    tone: "lavender",
+                    value: rm(basketTotal),
+                    sub: `${basket.length} items on your list`,
+                    tab: "groceries",
+                  },
+                  {
+                    label: "Already in pantry",
+                    icon: Brain,
+                    tone: "butter",
+                    value: `${groceries.filter((g) => g.inPantry).length} items`,
+                    sub: "From your household list",
+                    tab: "groceries",
+                  },
+                ].map(({ label, icon: Icon, tone, value, sub, tab }) => (
+                  <button
+                    className={`stat-card ${tone}`}
+                    key={label}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    <div className="stat-top">
+                      <span>{label}</span>
+                      <Icon size={19} />
+                    </div>
+                    <strong>{value}</strong>
+                    <span className="stat-sub">
+                      {sub}
+                      <span aria-hidden="true">
+                        <ArrowUpRight size={16} />
+                      </span>
+                    </span>
+                  </button>
+                ))}
+              </section>
+            </>
           )}
-
+          {activeTab === "household" && (
+            <>
+              <div className="live-mode-banner">
+                <strong>
+                  Live household · real accounts and saved records
+                </strong>
+                <a className="button primary" href="#demo">
+                  Switch to simulated demo
+                </a>
+                <p>
+                  No demo records are uploaded. Sign in below to create or join
+                  your private family household.
+                </p>
+              </div>
+              <HouseholdPanel />
+            </>
+          )}
+          {activeTab !== "household" && (
+            <>
+              <section
+                className="panel api-setup"
+                ref={feedbackRef}
+                aria-label="Meta Muse connection for LLAMA"
+              >
+                <div className="panel-heading">
+                  <div>
+                    <h2>
+                      {connection.loading
+                        ? "Checking API setup…"
+                        : connection.configured
+                          ? "Meta Muse configured · access code required"
+                          : "Meta Muse is not connected yet"}
+                    </h2>
+                    <p>
+                      Requests send the household data shown here to your
+                      configured model provider. Responses are suggestions only.
+                    </p>
+                  </div>
+                  <span className="status-pill">
+                    {hasConnected
+                      ? "Response received"
+                      : "No verified model response yet"}
+                  </span>
+                </div>
+                {!connection.loading && !connection.configured && (
+                  <div className="setup-details">
+                    <p>
+                      {connection.unavailable
+                        ? "API unavailable. Locally, start npm run dev:api alongside npm run dev."
+                        : `Set these server-only variables, then redeploy: ${connection.missing.join(", ")}.`}
+                    </p>
+                    <p>
+                      Never use a VITE_ prefix for secrets. See the README for
+                      setup and supported API protocols.
+                    </p>
+                  </div>
+                )}
+                {connection.configured && (
+                  <div className="access-field">
+                    <label htmlFor="access-code">
+                      Household demo access code (not your Meta API key)
+                    </label>
+                    <input
+                      id="access-code"
+                      type="password"
+                      autoComplete="off"
+                      value={accessCode}
+                      maxLength={256}
+                      onChange={(e) => setAccessCode(e.target.value)}
+                      placeholder="Shared privately by the project owner"
+                    />
+                    <p>
+                      This code stays in memory only. Keep it private; it grants
+                      access to billable model requests.
+                    </p>
+                  </div>
+                )}
+                {isRunning && (
+                  <p className="agent-working" role="status">
+                    Meta Muse is preparing a suggestion for LLAMA… No household
+                    records will be changed.
+                  </p>
+                )}
+                {agentError && (
+                  <p className="agent-error" role="alert">
+                    {agentError}
+                  </p>
+                )}
+              </section>
+              {agentResult && (
+                <section className="panel agent-answer" aria-live="polite">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>{agentResult.agent} · suggestion</h2>
+                      <p>
+                        Model: {agentResult.model} · Provider:{" "}
+                        {agentResult.source}
+                      </p>
+                    </div>
+                    <Sparkles size={23} />
+                  </div>
+                  <div className="answer-text">{agentResult.answer}</div>
+                  <p className="answer-caveat">
+                    Review estimates and details. Nothing was booked, paid,
+                    purchased, scheduled or automatically changed.
+                  </p>
+                </section>
+              )}
+            </>
+          )}
           {(overTravelBudget || overMonthlyCap) && (
             <div className="budget-alert" role="status">
               <AlertCircle size={19} />
@@ -1350,10 +1402,25 @@ travel_cap: ${rm(userPreferences.travelBudgetLimit)}
             <span className="purple-text">.</span>
           </span>
           <span>
-            LLAMA · Meta Muse · Sample data · Changes reset on refresh
+            {activeTab === "household"
+              ? "Private household · Saved to your family database"
+              : "LLAMA · Meta Muse · Sample data · Changes reset on refresh"}
           </span>
         </footer>
       </div>
     </div>
   );
+}
+
+export default function App() {
+  const [isDemo, setIsDemo] = useState(location.hash === "#demo");
+  useEffect(() => {
+    const updateRoute = () => {
+      setIsDemo(location.hash === "#demo");
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener("hashchange", updateRoute);
+    return () => window.removeEventListener("hashchange", updateRoute);
+  }, []);
+  return isDemo ? <HouseholdDemo /> : <Dashboard />;
 }
