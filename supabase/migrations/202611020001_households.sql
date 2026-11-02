@@ -46,6 +46,7 @@ create function public.create_household_invite(hid uuid) returns uuid language p
 declare code uuid;
 begin
  if not public.is_household_member(hid) then raise exception 'Membership required'; end if;
+ perform 1 from public.households where id=hid for update;
  -- One current invite per household. Treat this code as a private, expiring credential.
  delete from public.household_invites where household_id=hid;
  insert into public.household_invites(household_id) values(hid) returning token into code;
