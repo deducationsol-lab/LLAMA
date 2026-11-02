@@ -335,14 +335,22 @@ export default function HouseholdDemo() {
                 <p>School pickup · Aisha driving</p>
                 <label className="demo-pickup-label" htmlFor="demo-pickup-time">
                   Pickup time
-                  <input
+                  <select
                     id="demo-pickup-time"
-                    type="time"
                     value={pickupTime}
                     disabled={state.pickupScheduled}
                     onChange={(e) => setPickupTime(e.target.value)}
-                    required
-                  />
+                  >
+                    {Array.from(
+                      { length: 96 },
+                      (_, i) =>
+                        `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`,
+                    ).map((time) => (
+                      <option key={time} value={time}>
+                        {time}
+                      </option>
+                    ))}
+                  </select>
                 </label>
                 <div className="demo-task-note">
                   {state.reminderSent

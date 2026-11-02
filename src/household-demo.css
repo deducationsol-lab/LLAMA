@@ -429,7 +429,7 @@
   justify-content: space-between;
   gap: 8px;
 }
-.demo-pickup-label input {
+.demo-pickup-label select {
   border: 1px solid #e4d9ef;
   border-radius: 7px;
   font:
