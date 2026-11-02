@@ -4,6 +4,52 @@
   <img src="public/llama-logo.png" alt="LLAMA mascot: a blue llama with orange ears and a lightning-bolt medallion" width="220" height="220" />
 </p>
 
+# 🤖 LLAMA Everyday | Meta Hackathon 
+
+> Autonomous Multi-Agent System reasoning, planning, and executing everyday life logistics using Meta's Llama Stack ecosystem.
+
+## 🚀 Live Demo & Resources
+- **Web App**: [https://llama-everyday.vercel.app/](https://llama-everyday.vercel.app/)
+- **Demo Video**: [Watch on YouTube](https://youtu.be/RMFK-iADpJE?si=aAjyI44PpvYHot2-)
+- **GitHub Repository**: [https://github.com/deducationsol-lab/LLAMA](https://github.com/deducationsol-lab/LLAMA)
+
+---
+
+## 🎯 Track: Build for Your World
+Everyday life admin—flight bookings, bill recurrence, dietary meal planning, and schedule reconciliation—forces users to context-switch across 10+ disconnected apps. We built an integrated Llama 3.3 Agent Swarm that orchestrates and automates daily execution loops end-to-end.
+
+---
+
+## 🛠️ Architecture & Tech Stack
+- **AI Brain**: Llama 3.3 70B Instruct & Llama Stack Agent API (orchestrated from Muse Chat to final interactive board)
+- **Multi-Agent Domains**: 
+  - *Logistics & Travel*: Automated family trip planning & flight/itinerary syncs.
+  - *Life Admin & Bills*: Bill recurrence, budget tracking, and cashflow alerts.
+  - *Home & Groceries RAG*: Pantry vector memory, smart weekly meal suggestions, and categorized shopping lists.
+  - *Routine & Wellness*: Schedule reconciliation, school holiday coordination, and bedtime/work block alignment.
+- **Frontend**: React 18, Tailwind CSS, Lucide Icons, Copilot UX
+- **Memory & RAG Store**: FAISS / Vector RAG for dietary rules, household inventory, and user profile memory
+
+---
+
+## ⚙️ Local Setup & Development
+
+If you want to run the project locally:
+
+```bash
+# Clone the repository
+git clone [https://github.com/deducationsol-lab/LLAMA.git](https://github.com/deducationsol-lab/LLAMA.git)
+
+# Navigate into the project directory
+cd LLAMA
+
+# Install dependencies
+npm install
+
+# Run the development server
+npm run dev
+
+
 **A little help. A lot more life.** A React + Vite household dashboard with a server-side Meta Muse planning endpoint. Four specialist roles cover travel, bills, pantry/meal planning, and daily routines; a coordinator routes general requests. These are role prompts using one configured model, not four autonomous services or connected external networks.
 
 ## What works now
