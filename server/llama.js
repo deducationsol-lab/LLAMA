@@ -16,8 +16,8 @@ export function configuration(env = process.env) {
   if (!hasGemini && !hasLegacy) missing.push("GEMINI_API_KEY");
   return {
     configured: hasGemini || hasLegacy,
-    provider: hasGemini ? "Google Gemini" : hasLegacy ? "Meta Muse" : "Not configured",
-    model: env.GEMINI_MODEL_ID?.trim() || env.MUSE_MODEL_ID?.trim() || GEMINI_MODEL_ID,
+    provider: hasGemini ? "LLAMA AI" : hasLegacy ? "Meta Muse" : "Not configured",
+    model: "llama-free",
     missing,
     freeTier: true,
   };
@@ -153,7 +153,7 @@ export async function runAgent(
     throw new AgentError(
       503,
       "not_configured",
-      "Gemini is not connected to LLAMA. Add GEMINI_API_KEY to your environment.",
+      "LLAMA AI is not connected to LLAMA. Check server configuration.",
     );
   const task = selectTask(input.task, input.prompt);
   const [agent, instruction] = ROLES[task];
@@ -162,7 +162,7 @@ export async function runAgent(
   
   const userContent = `HOUSEHOLD DATA (for planning only):\n${JSON.stringify(input.context)}\n\nREQUEST:\n${input.prompt}`;
 
-  // Use Gemini if available, fallback to Muse for backwards compat
+  // Use primary AI if available, fallback to Muse for backwards compat
   const useGemini = !!env.GEMINI_API_KEY?.trim();
   
   try {
@@ -195,7 +195,7 @@ export async function runAgent(
         throw new AgentError(
           502,
           "output_limit",
-          "Gemini reached the response limit. Try a shorter, more focused request.",
+          "LLAMA AI reached the response limit. Try a shorter, more focused request.",
         );
       }
       const answer = candidate?.content?.parts?.[0]?.text;
@@ -203,13 +203,13 @@ export async function runAgent(
         throw new AgentError(
           502,
           "invalid_response",
-          "Gemini returned no usable text. Check your API key and try again.",
+          "LLAMA AI returned no usable text. Check your API key and try again.",
         );
       return {
         task,
         agent,
-        source: "Google Gemini",
-        model,
+        source: "LLAMA AI",
+        model: "llama-free",
         answer: answer.trim().slice(0, 12000),
       };
     } else {
@@ -229,7 +229,7 @@ export async function runAgent(
           Authorization: `Bearer ${env.MODEL_API_KEY}`,
         },
         body: JSON.stringify({
-          model: config.model,
+          model: "llama-free",
           messages,
           max_completion_tokens: 1200,
           reasoning_effort: "low",
@@ -255,7 +255,7 @@ export async function runAgent(
         task,
         agent,
         source: config.provider,
-        model: config.model,
+        model: "llama-free",
         answer: answer.trim().slice(0, 12000),
       };
     }
@@ -287,7 +287,7 @@ export async function runAgent(
       502,
       "provider_error",
       useGemini
-        ? "Gemini request failed. Check your GEMINI_API_KEY and try again."
+        ? "Request failed. Check server configuration and try again."
         : "The model request failed. Check the API key and model access.",
     );
   }

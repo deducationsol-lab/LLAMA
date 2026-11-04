@@ -8,7 +8,7 @@
 
 > Your household's everyday superpower. Plan trips, track bills, shop smarter, and find your rhythm — all in one colorful dashboard.
 
-**Free tier powered by Google Gemini. No credit card required. Just connect your household.**
+**Free tier powered by LLAMA AI. No credit card required. Just connect your household.**
 
 ## 🚀 Live Demo & Resources
 - **Web App**: [https://llama-everyday.vercel.app/](https://llama-everyday.vercel.app/)
@@ -21,7 +21,7 @@
 
 LLAMA is now **free for everyone** — no demo codes, no paywalls:
 
-- **🆓 Free AI**: Powered by Google Gemini (free tier) — 10 requests/minute, no API key needed from users
+- **🆓 Free AI**: Powered by LLAMA AI (free tier) — 10 requests/minute, no API key needed from users
 - **👨‍👩‍👧‍👦 Household Connect**: Create or join a household to save and share with family
 - **🔐 Simple Auth**: Sign up with email or continue as guest to try instantly
 - **💾 Persistent Storage**: Household data saved to Supabase (when connected)
@@ -35,7 +35,7 @@ Everyday life admin—flight bookings, bill recurrence, dietary meal planning, a
 ---
 
 ## 🛠️ Architecture & Tech Stack
-- **AI Brain**: Google Gemini 3 Flash (free tier) — orchestrated for household planning
+- **AI Brain**: LLAMA AI 3 Flash (free tier) — orchestrated for household planning
 - **Multi-Agent Domains**: 
   - *Logistics & Travel*: Automated family trip planning & itinerary syncs
   - *Life Admin & Bills*: Bill recurrence, budget tracking, and cashflow alerts
@@ -57,9 +57,9 @@ cd LLAMA
 # Install dependencies
 npm install
 
-# Set up environment (get free Gemini key at https://aistudio.google.com)
+# Set up environment (get free LLAMA AI key at https://aistudio.google.com)
 cp .env.example .env.local
-# Add: GEMINI_API_KEY=your_free_key
+# Add: AI_API_KEY=your_key (managed)
 # Add: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (optional, for household features)
 
 # Run the development server
@@ -71,16 +71,16 @@ npm run dev
 
 | Variable | Purpose | Required |
 |----------|---------|----------|
-| `GEMINI_API_KEY` | Free Google Gemini API key (get at aistudio.google.com) | Yes |
-| `GEMINI_MODEL_ID` | Model ID (default: `gemini-3-flash-preview`) | No |
+| `AI_API_KEY` | LLAMA AI key (managed) | Yes |
+| `AI_MODEL_ID` | AI model (managed) | No |
 | `VITE_SUPABASE_URL` | Supabase project URL | For household features |
 | `VITE_SUPABASE_ANON_KEY` | Supabase anon key | For household features |
 
-**Free Gemini Setup:**
+**Free LLAMA AI Setup:**
 1. Go to [Google AI Studio](https://aistudio.google.com)
 2. Create a free API key (no credit card, generous free tier)
-3. Add to your environment as `GEMINI_API_KEY`
-4. That's it — LLAMA will use Gemini for all AI suggestions
+3. Add to your environment as `AI_API_KEY` (managed)
+4. That's it — LLAMA will use LLAMA AI for all AI suggestions
 
 ---
 
@@ -89,7 +89,7 @@ npm run dev
 **For Guests (no account):**
 - Try all features instantly
 - Sample data, session-only
-- Full AI access via Gemini free tier
+- Full AI access via LLAMA AI free tier
 
 **For Members (with account):**
 - Create or join a household
@@ -108,7 +108,7 @@ npm run dev
 - **Smart Pantry**: Pantry-aware grocery lists and meal suggestions
 - **Daily Routine**: Balanced time blocks for work, family, and wellness
 - **Memory Lab**: Household preferences that personalize AI suggestions
-- **AI Assistant**: Ask anything — powered by Gemini, free for all
+- **AI Assistant**: Ask anything — powered by LLAMA AI, free for all
 
 ---
 
@@ -116,7 +116,7 @@ npm run dev
 
 - **Free Tier**: No API keys exposed to client, all AI calls server-side
 - **Rate Limiting**: 10 req/min, 100 req/hour per IP (prevents abuse)
-- **Household Data**: Only sent to Gemini when you ask for suggestions
+- **Household Data**: Only sent to LLAMA AI when you ask for suggestions
 - **No Sensitive Data**: Don't enter real bank credentials or sensitive info
 - **Supabase RLS**: Row-level security ensures households only see their data
 

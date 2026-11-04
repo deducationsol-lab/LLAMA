@@ -33,7 +33,7 @@ export function createHandler({
         throw new AgentError(
           503,
           "not_configured",
-          "LLAMA AI is not configured. The server needs a GEMINI_API_KEY.",
+          "LLAMA AI is not configured. Server configuration needed.",
         );
 
       // Free tier rate limiting by IP (generous: 10 req/min, 100 req/hour)

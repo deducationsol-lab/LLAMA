@@ -457,7 +457,7 @@ export default function App() {
     setAgentError("");
     if (!connection.configured) {
       setAgentError(
-        "LLAMA AI is not configured yet. The server needs a GEMINI_API_KEY. Check the setup below.",
+        "LLAMA AI is not configured yet. Check server setup.",
       );
       return;
     }
@@ -468,7 +468,7 @@ export default function App() {
       {
         agent: "COORDINATOR",
         type: "INFO",
-        msg: `Requesting a ${task === "general" ? "household" : task} suggestion via Gemini. No records will be changed.`,
+        msg: `Requesting a ${task === "general" ? "household" : task} suggestion via LLAMA AI. No records will be changed.`,
       },
     ]);
     try {
@@ -501,7 +501,7 @@ export default function App() {
         {
           agent: data.agent,
           type: "SUCCESS",
-          msg: "Gemini suggestion received. Review it above; no actions have been executed.",
+          msg: "LLAMA suggestion received. Review it above; no actions have been executed.",
         },
       ]);
       setCustomPrompt("");
@@ -610,7 +610,7 @@ export default function App() {
             <h1>llama<span className="brand-dot">.</span></h1>
             <p>A little help. A lot more life.</p>
             <div className="free-badge">
-              <Gift size={16} /> Free for everyone · Powered by Gemini
+              <Gift size={16} /> Free for everyone
             </div>
           </div>
 
@@ -696,7 +696,7 @@ export default function App() {
           </button>
 
           <p className="auth-footnote">
-            Free tier uses Google Gemini. No credit card required.<br />
+            Free tier — no credit card required.<br />
             Connect your household to save and share with family.
           </p>
         </div>
@@ -852,7 +852,7 @@ export default function App() {
             More living.
           </strong>
           <p>Your four-agent team has the everyday covered.</p>
-          <span>LLAMA · powered by Gemini · Free</span>
+          <span>LLAMA · Free</span>
         </div>
         <div className="household">
           <span className="avatar">{household ? household.name.slice(0, 2).toUpperCase() : "KL"}</span>
@@ -879,7 +879,7 @@ export default function App() {
             <strong>{currentTab.label}</strong>
           </div>
           <span className="demo-badge free-badge">
-            <Gift size={12} /> Free · Gemini
+            <Gift size={12} /> Free
           </span>
         </header>
         <main id="main-content" tabIndex={-1}>
@@ -973,7 +973,7 @@ export default function App() {
           <section
             className="panel api-setup"
             ref={feedbackRef}
-            aria-label="Gemini connection for LLAMA"
+            aria-label="LLAMA connection for LLAMA"
           >
             <div className="panel-heading">
               <div>
@@ -981,11 +981,11 @@ export default function App() {
                   {connection.loading
                     ? "Checking AI setup…"
                     : connection.configured
-                      ? "Gemini ready · Free for everyone"
+                      ? "LLAMA ready · Free for everyone"
                       : "AI is not connected yet"}
                 </h2>
                 <p>
-                  Free tier powered by Google Gemini. Your household data is sent to Gemini for suggestions only.
+                  Your household data is used for suggestions only.
                 </p>
               </div>
               <span className="status-pill">
@@ -1002,7 +1002,7 @@ export default function App() {
                     : `Server needs: ${connection.missing.join(", ")}.`}
                 </p>
                 <p>
-                  Add GEMINI_API_KEY to your environment (get one free at aistudio.google.com).
+                  Contact support if this persists.
                 </p>
               </div>
             )}
@@ -1014,7 +1014,7 @@ export default function App() {
             )}
             {isRunning && (
               <p className="agent-working" role="status">
-                Gemini is preparing a suggestion for LLAMA… No household
+                LLAMA is preparing a suggestion for LLAMA… No household
                 records will be changed.
               </p>
             )}
@@ -1030,7 +1030,7 @@ export default function App() {
                 <div>
                   <h2>{agentResult.agent} · suggestion</h2>
                   <p>
-                    Model: {agentResult.model} · Provider: {agentResult.source}
+                    LLAMA AI · Free
                   </p>
                 </div>
                 <Sparkles size={23} />
@@ -1256,7 +1256,7 @@ export default function App() {
                   <div className="panel-heading">
                     <div>
                       <h2>Meet your team</h2>
-                      <p>Four roles, routed to Gemini (free).</p>
+                      <p>Four roles, routed to LLAMA AI (free).</p>
                     </div>
                     <span className="team-count">04</span>
                   </div>
@@ -1590,7 +1590,7 @@ export default function App() {
                   <div>
                     <h2>A little more you.</h2>
                     <p>
-                      Share preferences with Gemini when you send
+                      Share preferences with LLAMA AI when you send
                       a request.
                     </p>
                   </div>
@@ -1634,7 +1634,7 @@ export default function App() {
                 <p className="memory-note">
                   <Sparkles size={17} />
                   Changes update your session budgets and the preferences shared
-                  with Gemini in this session.
+                  in this session.
                 </p>
               </div>
               <div className="panel prompt-preview">
@@ -1671,7 +1671,7 @@ travel_cap: ${rm(userPreferences.travelBudgetLimit)}
             <span className="purple-text">.</span>
           </span>
           <span>
-            LLAMA · Gemini Free · {household ? household.name : "Demo"} · Free for everyone
+            LLAMA · {household ? household.name : "Demo"} · Free for everyone
           </span>
         </footer>
       </div>
