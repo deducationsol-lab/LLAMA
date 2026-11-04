@@ -16,7 +16,17 @@ import {
   AlertCircle,
   ArrowUpRight,
   Asterisk,
+  LogOut,
+  Users,
+  Home,
+  Mail,
+  Lock,
+  UserPlus,
+  LogIn,
+  Crown,
+  Gift,
 } from "lucide-react";
+import { supabase, isSupabaseConfigured } from "./lib/supabase";
 
 const nowTime = () => new Date().toTimeString().slice(0, 8);
 const uid = () => Date.now() + Math.random().toString(16).slice(2);
@@ -280,17 +290,145 @@ export default function App() {
     loading: true,
     missing: [],
   });
-  const [accessCode, setAccessCode] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [agentResult, setAgentResult] = useState(null);
   const [agentError, setAgentError] = useState("");
   const [hasConnected, setHasConnected] = useState(false);
   const requestInFlight = useRef(false);
   const feedbackRef = useRef(null);
+
+  // Auth & Household state
+  const [user, setUser] = useState(null);
+  const [household, setHousehold] = useState(null);
+  const [authMode, setAuthMode] = useState("signin"); // signin | signup
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authName, setAuthName] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [householdName, setHouseholdName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [householdError, setHouseholdError] = useState("");
+  const [showHouseholdSetup, setShowHouseholdSetup] = useState(false);
+
   useEffect(() => {
     if (agentError || agentResult || isRunning)
       feedbackRef.current?.scrollIntoView({ block: "start" });
   }, [agentError, agentResult, isRunning]);
+
+  // Check Supabase auth
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) fetchHousehold(session.user.id);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchHousehold(session.user.id);
+      } else {
+        setHousehold(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchHousehold = async (userId) => {
+    if (!supabase) return;
+    const { data } = await supabase
+      .from("household_members")
+      .select("household_id, households(name)")
+      .eq("user_id", userId)
+      .single();
+    
+    if (data) {
+      setHousehold({ id: data.household_id, name: data.households.name });
+      setShowHouseholdSetup(false);
+    } else {
+      setShowHouseholdSetup(true);
+    }
+  };
+
+  const handleAuth = async (e) => {
+    e.preventDefault();
+    if (!supabase) {
+      setAuthError("Authentication not configured. You can continue as guest.");
+      return;
+    }
+    setAuthError("");
+    setAuthLoading(true);
+    try {
+      if (authMode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email: authEmail,
+          password: authPassword,
+          options: { data: { display_name: authName } }
+        });
+        if (error) throw error;
+        if (data.user && !data.session) {
+          setAuthError("Check your email to confirm your account, then sign in.");
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: authEmail,
+          password: authPassword,
+        });
+        if (error) throw error;
+      }
+    } catch (err) {
+      setAuthError(err.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    if (supabase) await supabase.auth.signOut();
+    setUser(null);
+    setHousehold(null);
+  };
+
+  const handleCreateHousehold = async (e) => {
+    e.preventDefault();
+    if (!supabase || !user) return;
+    setHouseholdError("");
+    try {
+      const { data, error } = await supabase.rpc("create_household", {
+        household_name: householdName,
+        member_name: authName || user.email?.split("@")[0] || "Member"
+      });
+      if (error) throw error;
+      setHousehold({ id: data, name: householdName });
+      setShowHouseholdSetup(false);
+      setHouseholdName("");
+    } catch (err) {
+      setHouseholdError(err.message);
+    }
+  };
+
+  const handleJoinHousehold = async (e) => {
+    e.preventDefault();
+    if (!supabase || !user) return;
+    setHouseholdError("");
+    try {
+      const { data, error } = await supabase.rpc("join_household", {
+        invite_token: inviteCode,
+        member_name: authName || user.email?.split("@")[0] || "Member"
+      });
+      if (error) throw error;
+      // Fetch household name
+      const { data: hData } = await supabase.from("households").select("name").eq("id", data).single();
+      setHousehold({ id: data, name: hData?.name || "Household" });
+      setShowHouseholdSetup(false);
+      setInviteCode("");
+    } catch (err) {
+      setHouseholdError(err.message);
+    }
+  };
 
   const checkConnection = async (signal) => {
     try {
@@ -319,13 +457,7 @@ export default function App() {
     setAgentError("");
     if (!connection.configured) {
       setAgentError(
-        "Meta Muse is not connected yet. Complete the server-side setup shown here, then recheck. No model request was sent.",
-      );
-      return;
-    }
-    if (!accessCode.trim()) {
-      setAgentError(
-        "Enter your household demo access code below. Never enter your Meta API key in this app.",
+        "LLAMA AI is not configured yet. The server needs a GEMINI_API_KEY. Check the setup below.",
       );
       return;
     }
@@ -336,17 +468,14 @@ export default function App() {
       {
         agent: "COORDINATOR",
         type: "INFO",
-        msg: `Requesting a ${task === "general" ? "household" : task} suggestion. No records will be changed.`,
+        msg: `Requesting a ${task === "general" ? "household" : task} suggestion via Gemini. No records will be changed.`,
       },
     ]);
     try {
       const response = await fetch("/api/agent", {
         method: "POST",
         signal: AbortSignal.timeout(35000),
-        headers: {
-          "Content-Type": "application/json",
-          "X-Llama-Access-Code": accessCode,
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           task,
           prompt,
@@ -372,7 +501,7 @@ export default function App() {
         {
           agent: data.agent,
           type: "SUCCESS",
-          msg: "Model suggestion received. Review it above; no actions have been executed.",
+          msg: "Gemini suggestion received. Review it above; no actions have been executed.",
         },
       ]);
       setCustomPrompt("");
@@ -468,6 +597,209 @@ export default function App() {
   ];
   const currentTab = TABS.find((tab) => tab.id === activeTab);
 
+  // Auth gate - show welcome screen if not logged in and Supabase is configured
+  const showAuthGate = isSupabaseConfigured && !user;
+  const showHouseholdGate = isSupabaseConfigured && user && showHouseholdSetup;
+
+  if (showAuthGate) {
+    return (
+      <div className="auth-shell">
+        <div className="auth-card">
+          <div className="auth-header">
+            <img src="/llama-logo.png" alt="" width="56" height="56" className="auth-logo" />
+            <h1>llama<span className="brand-dot">.</span></h1>
+            <p>A little help. A lot more life.</p>
+            <div className="free-badge">
+              <Gift size={16} /> Free for everyone · Powered by Gemini
+            </div>
+          </div>
+
+          <div className="auth-tabs">
+            <button
+              className={authMode === "signin" ? "active" : ""}
+              onClick={() => setAuthMode("signin")}
+            >
+              <LogIn size={16} /> Sign in
+            </button>
+            <button
+              className={authMode === "signup" ? "active" : ""}
+              onClick={() => setAuthMode("signup")}
+            >
+              <UserPlus size={16} /> Create account
+            </button>
+          </div>
+
+          <form onSubmit={handleAuth} className="auth-form">
+            {authMode === "signup" && (
+              <div className="auth-field">
+                <label htmlFor="auth-name">Your name</label>
+                <div className="input-wrap">
+                  <Users size={16} />
+                  <input
+                    id="auth-name"
+                    value={authName}
+                    onChange={(e) => setAuthName(e.target.value)}
+                    placeholder="e.g. Aisha"
+                    required={authMode === "signup"}
+                  />
+                </div>
+              </div>
+            )}
+            <div className="auth-field">
+              <label htmlFor="auth-email">Email</label>
+              <div className="input-wrap">
+                <Mail size={16} />
+                <input
+                  id="auth-email"
+                  type="email"
+                  value={authEmail}
+                  onChange={(e) => setAuthEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  required
+                />
+              </div>
+            </div>
+            <div className="auth-field">
+              <label htmlFor="auth-password">Password</label>
+              <div className="input-wrap">
+                <Lock size={16} />
+                <input
+                  id="auth-password"
+                  type="password"
+                  value={authPassword}
+                  onChange={(e) => setAuthPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  required
+                  minLength={6}
+                />
+              </div>
+            </div>
+            {authError && <p className="auth-error" role="alert">{authError}</p>}
+            <button type="submit" className="button primary auth-submit" disabled={authLoading}>
+              {authLoading ? "Please wait…" : authMode === "signup" ? "Create free account" : "Sign in"}
+            </button>
+          </form>
+
+          <div className="auth-divider">
+            <span>or</span>
+          </div>
+
+          <button
+            className="button ghost auth-guest"
+            onClick={() => {
+              // Guest mode - set a dummy user to bypass auth
+              setUser({ id: "guest", email: "guest@llama.local" });
+              setHousehold({ id: "guest-household", name: "Demo Household" });
+            }}
+          >
+            Continue as guest · Try LLAMA free
+          </button>
+
+          <p className="auth-footnote">
+            Free tier uses Google Gemini. No credit card required.<br />
+            Connect your household to save and share with family.
+          </p>
+        </div>
+
+        <div className="auth-features">
+          <h2>Your everyday, lighter.</h2>
+          <div className="feature-list">
+            <div className="feature">
+              <span className="feature-icon lavender"><Plane size={20} /></span>
+              <div>
+                <strong>Plan trips together</strong>
+                <span>Penang itineraries, budgets, and checklists</span>
+              </div>
+            </div>
+            <div className="feature">
+              <span className="feature-icon peach"><Receipt size={20} /></span>
+              <div>
+                <strong>Stay on top of bills</strong>
+                <span>Cashflow summaries and payment priorities</span>
+              </div>
+            </div>
+            <div className="feature">
+              <span className="feature-icon lime"><ShoppingCart size={20} /></span>
+              <div>
+                <strong>Shop smarter</strong>
+                <span>Pantry-aware meals and grocery lists</span>
+              </div>
+            </div>
+            <div className="feature">
+              <span className="feature-icon butter"><Clock size={20} /></span>
+              <div>
+                <strong>Find your rhythm</strong>
+                <span>Balanced routines for the whole family</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showHouseholdGate) {
+    return (
+      <div className="auth-shell">
+        <div className="auth-card">
+          <div className="auth-header">
+            <Home size={32} />
+            <h1>Connect your household</h1>
+            <p>One household, shared everywhere. Free forever.</p>
+          </div>
+
+          <form onSubmit={handleCreateHousehold} className="auth-form">
+            <h3><Crown size={16} /> Create a new household</h3>
+            <div className="auth-field">
+              <label htmlFor="household-name">Household name</label>
+              <div className="input-wrap">
+                <Home size={16} />
+                <input
+                  id="household-name"
+                  value={householdName}
+                  onChange={(e) => setHouseholdName(e.target.value)}
+                  placeholder="e.g. The Ahmad Family"
+                  required
+                />
+              </div>
+            </div>
+            <button type="submit" className="button primary auth-submit">
+              Create household
+            </button>
+          </form>
+
+          <div className="auth-divider"><span>or</span></div>
+
+          <form onSubmit={handleJoinHousehold} className="auth-form">
+            <h3><Users size={16} /> Join with invite code</h3>
+            <div className="auth-field">
+              <label htmlFor="invite-code">Invite code</label>
+              <div className="input-wrap">
+                <Mail size={16} />
+                <input
+                  id="invite-code"
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value)}
+                  placeholder="Paste invite code"
+                  required
+                />
+              </div>
+            </div>
+            <button type="submit" className="button dark auth-submit">
+              Join household
+            </button>
+          </form>
+
+          {householdError && <p className="auth-error" role="alert">{householdError}</p>}
+
+          <button className="button ghost" onClick={handleSignOut} style={{ marginTop: 16, width: "100%" }}>
+            <LogOut size={16} /> Sign out
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
@@ -520,17 +852,22 @@ export default function App() {
             More living.
           </strong>
           <p>Your four-agent team has the everyday covered.</p>
-          <span>LLAMA · powered by Meta Muse</span>
+          <span>LLAMA · powered by Gemini · Free</span>
         </div>
         <div className="household">
-          <span className="avatar">KL</span>
+          <span className="avatar">{household ? household.name.slice(0, 2).toUpperCase() : "KL"}</span>
           <div>
-            <strong>Your household</strong>
+            <strong>{household ? household.name : "Your household"}</strong>
             <small>
               {userPreferences.homeLocation} · {userPreferences.familySize}{" "}
-              people
+              people {household && "· Free tier"}
             </small>
           </div>
+          {user && user.id !== "guest" && (
+            <button className="icon-button" onClick={handleSignOut} aria-label="Sign out" title="Sign out">
+              <LogOut size={16} />
+            </button>
+          )}
         </div>
       </aside>
 
@@ -541,8 +878,8 @@ export default function App() {
             <span className="breadcrumb-slash">/</span>
             <strong>{currentTab.label}</strong>
           </div>
-          <span className="demo-badge">
-            <span /> Sample household data
+          <span className="demo-badge free-badge">
+            <Gift size={12} /> Free · Gemini
           </span>
         </header>
         <main id="main-content" tabIndex={-1}>
@@ -565,8 +902,8 @@ export default function App() {
               </h1>
               <p>
                 {activeTab === "feeds"
-                  ? "Your everyday, working together. Here’s the big picture."
-                  : "One less thing on your mind. Let’s make room for what matters."}
+                  ? "Your everyday, working together. Here's the big picture."
+                  : "One less thing on your mind. Let's make room for what matters."}
               </p>
             </div>
             <button
@@ -636,64 +973,48 @@ export default function App() {
           <section
             className="panel api-setup"
             ref={feedbackRef}
-            aria-label="Meta Muse connection for LLAMA"
+            aria-label="Gemini connection for LLAMA"
           >
             <div className="panel-heading">
               <div>
                 <h2>
                   {connection.loading
-                    ? "Checking API setup…"
+                    ? "Checking AI setup…"
                     : connection.configured
-                      ? "Meta Muse configured · access code required"
-                      : "Meta Muse is not connected yet"}
+                      ? "Gemini ready · Free for everyone"
+                      : "AI is not connected yet"}
                 </h2>
                 <p>
-                  Requests send the household data shown here to your configured
-                  model provider. Responses are suggestions only.
+                  Free tier powered by Google Gemini. Your household data is sent to Gemini for suggestions only.
                 </p>
               </div>
               <span className="status-pill">
                 {hasConnected
                   ? "Response received"
-                  : "No verified model response yet"}
+                  : "No request yet"}
               </span>
             </div>
             {!connection.loading && !connection.configured && (
               <div className="setup-details">
                 <p>
                   {connection.unavailable
-                    ? "API unavailable. Locally, start npm run dev:api alongside npm run dev."
-                    : `Set these server-only variables, then redeploy: ${connection.missing.join(", ")}.`}
+                    ? "API unavailable. Start the dev server with npm run dev."
+                    : `Server needs: ${connection.missing.join(", ")}.`}
                 </p>
                 <p>
-                  Never use a VITE_ prefix for secrets. See the README for setup
-                  and supported API protocols.
+                  Add GEMINI_API_KEY to your environment (get one free at aistudio.google.com).
                 </p>
               </div>
             )}
             {connection.configured && (
-              <div className="access-field">
-                <label htmlFor="access-code">
-                  Household demo access code (not your Meta API key)
-                </label>
-                <input
-                  id="access-code"
-                  type="password"
-                  autoComplete="off"
-                  value={accessCode}
-                  maxLength={256}
-                  onChange={(e) => setAccessCode(e.target.value)}
-                  placeholder="Shared privately by the project owner"
-                />
-                <p>
-                  This code stays in memory only. Keep it private; it grants
-                  access to billable model requests.
-                </p>
+              <div className="free-tier-notice">
+                <Gift size={16} />
+                <span>Free tier: 10 requests/minute · No access code needed · Just ask!</span>
               </div>
             )}
             {isRunning && (
               <p className="agent-working" role="status">
-                Meta Muse is preparing a suggestion for LLAMA… No household
+                Gemini is preparing a suggestion for LLAMA… No household
                 records will be changed.
               </p>
             )}
@@ -754,7 +1075,7 @@ export default function App() {
                     <br />A whole lot of possibility.
                   </h2>
                   <p>
-                    From your next getaway to tonight’s grocery run.
+                    From your next getaway to tonight's grocery run.
                     <br className="desktop-break" /> Give the small stuff to
                     your team.
                   </p>
@@ -763,7 +1084,7 @@ export default function App() {
                     onClick={triggerTripWorkflow}
                     disabled={isRunning}
                   >
-                    Let’s plan a getaway <Plane size={17} />
+                    Let's plan a getaway <Plane size={17} />
                   </button>
                 </div>
                 <div className="hero-art" aria-hidden="true">
@@ -796,7 +1117,7 @@ export default function App() {
               </section>
               <section className="quick-section">
                 <div className="section-heading">
-                  <h2>What’s on your mind?</h2>
+                  <h2>What's on your mind?</h2>
                   <span>One click to get things moving</span>
                 </div>
                 <div className="quick-grid">
@@ -849,7 +1170,7 @@ export default function App() {
                   <div className="panel-heading">
                     <div>
                       <h2>The everyday feed</h2>
-                      <p>Your team’s activity, in one place.</p>
+                      <p>Your team's activity, in one place.</p>
                     </div>
                     <span
                       className={`status-pill ${isRunning ? "running" : ""}`}
@@ -935,7 +1256,7 @@ export default function App() {
                   <div className="panel-heading">
                     <div>
                       <h2>Meet your team</h2>
-                      <p>Four roles, routed to one configured model.</p>
+                      <p>Four roles, routed to Gemini (free).</p>
                     </div>
                     <span className="team-count">04</span>
                   </div>
@@ -955,7 +1276,7 @@ export default function App() {
                             {isRunning
                               ? "request active"
                               : connection.configured
-                                ? "configured"
+                                ? "free · ready"
                                 : "not connected"}
                           </span>
                         </div>
@@ -1269,7 +1590,7 @@ export default function App() {
                   <div>
                     <h2>A little more you.</h2>
                     <p>
-                      Share preferences with your configured model when you send
+                      Share preferences with Gemini when you send
                       a request.
                     </p>
                   </div>
@@ -1313,7 +1634,7 @@ export default function App() {
                 <p className="memory-note">
                   <Sparkles size={17} />
                   Changes update your session budgets and the preferences shared
-                  with the model in this session.
+                  with Gemini in this session.
                 </p>
               </div>
               <div className="panel prompt-preview">
@@ -1350,7 +1671,7 @@ travel_cap: ${rm(userPreferences.travelBudgetLimit)}
             <span className="purple-text">.</span>
           </span>
           <span>
-            LLAMA · Meta Muse · Sample data · Changes reset on refresh
+            LLAMA · Gemini Free · {household ? household.name : "Demo"} · Free for everyone
           </span>
         </footer>
       </div>

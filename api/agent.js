@@ -1,14 +1,7 @@
-import { createHash, timingSafeEqual } from "node:crypto";
-import {
-  AgentError,
-  configuration,
-  runAgent,
-  validateInput,
-} from "../server/llama.js";
+import { AgentError, configuration, runAgent, validateInput } from "../server/llama.js";
 
 const MAX_BYTES = 48000;
-const digest = (value) => createHash("sha256").update(value).digest();
-// Best-effort per-instance burst guard. The access code is the real demo access boundary.
+// Free tier: generous but prevents abuse - per IP rate limiting
 const attempts = new Map();
 const active = new Set();
 
@@ -27,9 +20,11 @@ export function createHandler({
       res.setHeader("Content-Type", "application/json");
       res.end(JSON.stringify(data));
     };
-    let accessHash;
     try {
-      if (req.method === "GET") return send(200, configuration(env));
+      if (req.method === "GET") {
+        const config = configuration(env);
+        return send(200, { ...config, freeTier: true, message: "LLAMA is free for everyone. Just connect your household to get started." });
+      }
       if (req.method !== "POST") {
         res.setHeader("Allow", "GET, POST");
         return send(405, { error: "Method not allowed." });
@@ -38,36 +33,37 @@ export function createHandler({
         throw new AgentError(
           503,
           "not_configured",
-          "Meta Muse is not connected to LLAMA. Complete the server-side API setup.",
+          "LLAMA AI is not configured. The server needs a GEMINI_API_KEY.",
         );
-      const access = req.headers["x-llama-access-code"];
-      if (
-        typeof access !== "string" ||
-        access.length > 256 ||
-        !timingSafeEqual(digest(access), digest(env.HOUSEHOLD_ACCESS_CODE))
-      )
-        throw new AgentError(
-          401,
-          "access_required",
-          "Enter the household demo access code, not your Meta API key.",
-        );
-      accessHash = digest(access).toString("hex");
+
+      // Free tier rate limiting by IP (generous: 10 req/min, 100 req/hour)
+      const ip = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.socket?.remoteAddress || "unknown";
       const timestamp = now();
-      const bucket = limits.get(accessHash) || { since: timestamp, count: 0 };
+      const bucket = limits.get(ip) || { since: timestamp, count: 0, hourSince: timestamp, hourCount: 0 };
+      
+      // Reset minute bucket
       if (timestamp - bucket.since >= 60000) {
         bucket.since = timestamp;
         bucket.count = 0;
       }
-      if (bucket.count >= 6 || running.has(accessHash)) {
+      // Reset hour bucket
+      if (timestamp - bucket.hourSince >= 3600000) {
+        bucket.hourSince = timestamp;
+        bucket.hourCount = 0;
+      }
+      
+      if (bucket.count >= 10 || bucket.hourCount >= 100 || running.has(ip)) {
         res.setHeader("Retry-After", "60");
         throw new AgentError(
           429,
-          "demo_limit",
-          "Please wait before sending another agent request.",
+          "rate_limit",
+          "You're sending requests too quickly. Please wait a moment.",
         );
       }
       bucket.count++;
-      limits.set(accessHash, bucket);
+      bucket.hourCount++;
+      limits.set(ip, bucket);
+
       if (
         !String(req.headers["content-type"] || "").startsWith(
           "application/json",
@@ -115,16 +111,16 @@ export function createHandler({
         }
       }
       const input = validateInput(body);
-      running.add(accessHash);
+      running.add(ip);
       try {
-        return send(200, await run(input, { env }));
+        const result = await run(input, { env });
+        return send(200, result);
       } finally {
-        running.delete(accessHash);
+        running.delete(ip);
       }
     } catch (error) {
       if (error instanceof AgentError)
         return send(error.status, { code: error.code, error: error.message });
-      // Never return provider bodies, request headers or credentials.
       return send(500, {
         code: "server_error",
         error: "The agent request could not be completed.",

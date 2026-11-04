@@ -4,131 +4,162 @@
   <img src="public/llama-logo.png" alt="LLAMA mascot: a blue llama with orange ears and a lightning-bolt medallion" width="220" height="220" />
 </p>
 
-# 🤖 LLAMA Everyday | Meta Hackathon 
+# 🤖 LLAMA Everyday — Free for Everyone
 
-> Autonomous Multi-Agent System reasoning, planning, and executing everyday life logistics using Meta's Llama Stack ecosystem.
+> Your household's everyday superpower. Plan trips, track bills, shop smarter, and find your rhythm — all in one colorful dashboard.
+
+**Free tier powered by Google Gemini. No credit card required. Just connect your household.**
 
 ## 🚀 Live Demo & Resources
 - **Web App**: [https://llama-everyday.vercel.app/](https://llama-everyday.vercel.app/)
-
-HOUSEHOLD DEMO ACCESS CODE IS : METAHACKATHONLLAMA01
 - **Demo Video**: [Watch on YouTube](https://youtu.be/RMFK-iADpJE?si=aAjyI44PpvYHot2-)
 - **GitHub Repository**: [https://github.com/deducationsol-lab/LLAMA](https://github.com/deducationsol-lab/LLAMA)
 
 ---
 
+## ✨ What's New: Free for Everyone
+
+LLAMA is now **free for everyone** — no demo codes, no paywalls:
+
+- **🆓 Free AI**: Powered by Google Gemini (free tier) — 10 requests/minute, no API key needed from users
+- **👨‍👩‍👧‍👦 Household Connect**: Create or join a household to save and share with family
+- **🔐 Simple Auth**: Sign up with email or continue as guest to try instantly
+- **💾 Persistent Storage**: Household data saved to Supabase (when connected)
+- **🎨 Same Beautiful UI**: All your favorite features, now accessible to all
+
+---
+
 ## 🎯 Track: Build for Your World
-Everyday life admin—flight bookings, bill recurrence, dietary meal planning, and schedule reconciliation—forces users to context-switch across 10+ disconnected apps. We built an integrated Llama 3.3 Agent Swarm that orchestrates and automates daily execution loops end-to-end.
+Everyday life admin—flight bookings, bill recurrence, dietary meal planning, and schedule reconciliation—forces users to context-switch across 10+ disconnected apps. We built an integrated household dashboard that orchestrates daily execution loops end-to-end.
 
 ---
 
 ## 🛠️ Architecture & Tech Stack
-- **AI Brain**: Llama 3.3 70B Instruct & Llama Stack Agent API (orchestrated from Muse Chat to final interactive board)
+- **AI Brain**: Google Gemini 3 Flash (free tier) — orchestrated for household planning
 - **Multi-Agent Domains**: 
-  - *Logistics & Travel*: Automated family trip planning & flight/itinerary syncs.
-  - *Life Admin & Bills*: Bill recurrence, budget tracking, and cashflow alerts.
-  - *Home & Groceries RAG*: Pantry vector memory, smart weekly meal suggestions, and categorized shopping lists.
-  - *Routine & Wellness*: Schedule reconciliation, school holiday coordination, and bedtime/work block alignment.
-- **Frontend**: React 18, Tailwind CSS, Lucide Icons, Copilot UX
-- **Memory & RAG Store**: FAISS / Vector RAG for dietary rules, household inventory, and user profile memory
+  - *Logistics & Travel*: Automated family trip planning & itinerary syncs
+  - *Life Admin & Bills*: Bill recurrence, budget tracking, and cashflow alerts
+  - *Home & Groceries*: Pantry memory, smart weekly meal suggestions, and categorized shopping lists
+  - *Routine & Wellness*: Schedule reconciliation, school holiday coordination, and bedtime/work block alignment
+- **Frontend**: React 18, Tailwind CSS, Lucide Icons
+- **Backend**: Vercel Serverless Functions + Supabase (auth, households, persistence)
+- **Memory**: Supabase for household preferences, bills, groceries, and activity
 
 ---
 
 ## ⚙️ Local Setup & Development
 
-If you want to run the project locally:
-
 ```bash
 # Clone the repository
-git clone [https://github.com/deducationsol-lab/LLAMA.git](https://github.com/deducationsol-lab/LLAMA.git)
-
-# Navigate into the project directory
+git clone https://github.com/deducationsol-lab/LLAMA.git
 cd LLAMA
 
 # Install dependencies
 npm install
 
+# Set up environment (get free Gemini key at https://aistudio.google.com)
+cp .env.example .env.local
+# Add: GEMINI_API_KEY=your_free_key
+# Add: VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY (optional, for household features)
+
 # Run the development server
 npm run dev
-
-
-**A little help. A lot more life.** A React + Vite household dashboard with a server-side Meta Muse planning endpoint. Four specialist roles cover travel, bills, pantry/meal planning, and daily routines; a coordinator routes general requests. These are role prompts using one configured model, not four autonomous services or connected external networks.
-
-## What works now
-
-- Household forms and sample records work without an API. Changes are session-only and reset on refresh.
-- Quick actions and the prompt form call `/api/agent` for real model suggestions when configured and unlocked.
-- Household preferences and bounded lists are sent to the configured model provider only when the user submits a request. Do not enter sensitive real household data into a shared hackathon demo.
-- Model output is displayed as plain text and never executed, injected as HTML, or applied automatically to bills, groceries, travel or routines.
-- Missing setup, invalid access, provider authentication/quota failures, timeouts and empty responses are shown as errors. There is no simulated-success fallback or background model polling.
-- The activity feed records actual requests/results and explicit manual bill edits, not fabricated external tool calls. Agent cards describe roles, not invented CPU usage or processing statistics.
-
-## Connect Meta Muse to LLAMA
-
-Do **not** paste credentials into chat, the browser, a commit, or a `VITE_` variable.
-
-**LLAMA is this independent everyday-life project**, built for the Meta hackathon’s Build for Your World track. **Meta Muse is its model provider**, not the project name and not Meta's separate Llama API.
-
-| Server variable         | Purpose                                                                                           |
-| ----------------------- | ------------------------------------------------------------------------------------------------- |
-| `MUSE_API_DOCS_URL`     | Public reference: `https://dev.meta.ai/docs/` (documentation only).                               |
-| `MUSE_MODELS_URL`       | Public reference: `https://dev.meta.ai/docs/models` (documentation only).                         |
-| `MUSE_BASE_URL`         | `https://api.meta.ai/v1` (default; other origins rejected).                                       |
-| `MUSE_CHAT_PATH`        | `/chat/completions` (default; other routes rejected).                                             |
-| `MUSE_MODEL_ID`         | `muse-spark-1.3` (default; change only to a model available to your account).                     |
-| `MODEL_API_KEY`         | Secret Meta Model API bearer key. Never commit a value.                                           |
-| `HOUSEHOLD_ACCESS_CODE` | Separate private demo password, 16–256 characters. Store as a Secret; never use the API key here. |
-
-Public `MUSE_*` settings can be committed in `.env.example`. **Do not put `MODEL_API_KEY` in the frontend or a `VITE_` variable.** The API calls Meta's documented OpenAI-compatible endpoint and reads `choices[0].message.content`. It uses `max_completion_tokens: 1200`, `reasoning_effort: low`, and leaves temperature unset per [Meta's Chat Completions documentation](https://dev.meta.ai/docs/protocols/chat-completions). Truncated, empty, authentication, quota and timeout responses show an error rather than a fabricated success. There is no call to Meta's Llama API or the former Llama SDK.
-
-### On Vercel
-
-The existing Vite project serves its frontend and the Node handler in `api/agent.js` on the same origin. No Render deployment, browser API key, or public backend URL is needed.
-
-1. Open your project, then **Environment Variables** in the sidebar. Add the variables above for the intended Preview branch/environment first. Use the **Secret** type for the API key and demo access code. See [Vercel environment-variable documentation](https://vercel.com/docs/environment-variables/managing-environment-variables) and [Secret types](https://vercel.com/docs/environment-variables/sensitive-environment-variables).
-2. Create a new deployment/redeploy after saving; existing deployments don't acquire new values.
-3. Click **Recheck API**. “API configured” means the settings are present, **not** that credentials or model access have been verified.
-4. Enter only the separate household demo access code (not `MODEL_API_KEY`) in the app. Submit a small request such as “Suggest a dinner using our pantry.” A successful response shows the agent role, configured model and provider protocol.
-5. Keep the preview/access code private and set provider-side quota/spend controls before sharing with judges. If secrets differ between Preview and Production, use each environment's own values.
-
-All Vercel configuration changes and deployments require the project's normal approval flow. This repository does not set credentials or promote production automatically.
-
-### Locally
-
-Use Node 26 (the linked project's runtime). From the repository root:
-
-```bash
-npm install
-cp server/.env.example server/.env
-# Fill server/.env privately with MODEL_API_KEY and HOUSEHOLD_ACCESS_CODE.
-npm run dev:api
+# Open http://localhost:3000
 ```
 
-In a second terminal:
+**Environment Variables:**
+
+| Variable | Purpose | Required |
+|----------|---------|----------|
+| `GEMINI_API_KEY` | Free Google Gemini API key (get at aistudio.google.com) | Yes |
+| `GEMINI_MODEL_ID` | Model ID (default: `gemini-3-flash-preview`) | No |
+| `VITE_SUPABASE_URL` | Supabase project URL | For household features |
+| `VITE_SUPABASE_ANON_KEY` | Supabase anon key | For household features |
+
+**Free Gemini Setup:**
+1. Go to [Google AI Studio](https://aistudio.google.com)
+2. Create a free API key (no credit card, generous free tier)
+3. Add to your environment as `GEMINI_API_KEY`
+4. That's it — LLAMA will use Gemini for all AI suggestions
+
+---
+
+## 🏠 Household Features
+
+**For Guests (no account):**
+- Try all features instantly
+- Sample data, session-only
+- Full AI access via Gemini free tier
+
+**For Members (with account):**
+- Create or join a household
+- Save bills, groceries, preferences
+- Share with family members
+- Invite via code
+- Persistent across devices
+
+---
+
+## 🎨 Features
+
+- **Overview Dashboard**: Bills, routine, groceries, and pantry at a glance
+- **Travel Plans**: 3-day Penang itineraries with budget tracking
+- **Bills & Budget**: Recurring bills, due dates, and cashflow insights
+- **Smart Pantry**: Pantry-aware grocery lists and meal suggestions
+- **Daily Routine**: Balanced time blocks for work, family, and wellness
+- **Memory Lab**: Household preferences that personalize AI suggestions
+- **AI Assistant**: Ask anything — powered by Gemini, free for all
+
+---
+
+## 🔒 Security & Privacy
+
+- **Free Tier**: No API keys exposed to client, all AI calls server-side
+- **Rate Limiting**: 10 req/min, 100 req/hour per IP (prevents abuse)
+- **Household Data**: Only sent to Gemini when you ask for suggestions
+- **No Sensitive Data**: Don't enter real bank credentials or sensitive info
+- **Supabase RLS**: Row-level security ensures households only see their data
+
+---
+
+## 💡 Suggestions for Next Steps
+
+**High Impact, Low Effort:**
+1. **Bill Reminders**: Push notifications for due dates (via Supabase + Vercel Cron)
+2. **Grocery Price History**: Track price changes over time, suggest best time to buy
+3. **Travel Wishlist**: Save multiple itineraries, compare budgets
+4. **Family Calendar**: Shared calendar with school holidays and events
+5. **Recipe Collection**: Save AI-suggested meals, rate and share
+
+**Medium Effort, High Value:**
+6. **Expense Analytics**: Monthly spending charts, category breakdowns
+7. **Pantry Barcode Scanner**: Scan items to auto-add to pantry
+8. **Bill Photo Upload**: OCR to auto-extract bill details
+9. **Household Chat**: Family members can discuss plans in-app
+10. **Offline Mode**: PWA with offline access to household data
+
+**Advanced Features:**
+11. **Smart Notifications**: AI-powered insights ("You're spending 20% more on groceries")
+12. **Integration Hub**: Connect to Google Calendar, bank feeds (with consent)
+13. **Voice Assistant**: "Hey LLAMA, what's for dinner?"
+14. **Multi-language**: Support for Bahasa Malaysia, Mandarin, Tamil
+15. **Kids Mode**: Simplified UI for children to contribute to household tasks
+
+---
+
+## 🧪 Checks
 
 ```bash
-npm run dev
+npm run check:agent  # Test AI handler
+npm run build        # Production build
 ```
 
-Vite runs at `http://localhost:3000` and proxies `/api` to `127.0.0.1:8080`. The API uses the same handler as Vercel. Restart `dev:api` after changing environment variables. Root `.env.local` is also supported for local development; `server/.env` is loaded afterward. Hosting-injected environment variables take precedence. `npm start` starts only the standalone API, not the frontend. An optional Render blueprint is included for API-only hosting; the default frontend intentionally uses same-origin requests and does not automatically connect to Render.
+---
 
-## Checks
+## 📱 Project Branding
 
-```bash
-npm run check:agent
-npm run build
-```
+The app and README use the supplied mascot in `public/llama-logo.png`. Browser and Apple touch icons are alongside it.
 
-The focused regression script exercises Meta Muse requests with fake provider responses and the real HTTP handler: configuration, exact endpoint/model/auth and token parameters, input bounds, role selection, authentication, sanitized failures, truncated output, quota and timeout handling, and burst limits. It never needs a real key or makes external model calls. A live credentialed response must still be verified after setup.
+---
 
-## Demo security and limitations
-
-- The API fails closed unless the provider configuration and private access code are present. The access code is held in browser memory only and is never the provider API key.
-- Requests require JSON, a bounded context and an access-code header; provider calls have a 25-second timeout, no automatic retries, a 1200-token output cap, and no redirects. The browser blocks duplicate submissions.
-- A best-effort **per-instance** guard allows at most six authenticated attempts/minute and one in flight. It is not a durable/global rate limit and can reset on cold start or scale-out. The shared demo password is not household user authentication. Add real authentication, durable quotas and storage before public/multi-household production use.
-- There are no live bank, grocery, flight, calendar, weather or home-device integrations. Plans and prices are suggestions/estimates, not verified availability or executed actions. No vector database is connected and no time-saved claims are generated.
-- No records are stored on the server; the earlier invalid file “database” (actually misplaced JavaScript) and broken backend were replaced. Household data remains session-only, except for data sent to the configured provider under its policies.
-
-## Project branding
-
-The app and README use the supplied mascot in `public/llama-logo.png`. Browser and Apple touch icons are alongside it. For GitHub link previews, manually upload `public/github-social-preview.png` (1280 × 640) under **Settings → Social preview → Edit → Upload an image**.
+**A little help. A lot more life.** — LLAMA is free for everyone. Connect your household and get started.
