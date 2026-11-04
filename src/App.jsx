@@ -696,7 +696,6 @@ export default function App() {
           </button>
 
           <p className="auth-footnote">
-            Free tier — no credit card required.<br />
             Connect your household to save and share with family.
           </p>
         </div>
@@ -860,7 +859,7 @@ export default function App() {
             <strong>{household ? household.name : "Your household"}</strong>
             <small>
               {userPreferences.homeLocation} · {userPreferences.familySize}{" "}
-              people {household && "· Free tier"}
+              people
             </small>
           </div>
           {user && user.id !== "guest" && (
@@ -1009,7 +1008,7 @@ export default function App() {
             {connection.configured && (
               <div className="free-tier-notice">
                 <Gift size={16} />
-                <span>Free tier: 10 requests/minute · No access code needed · Just ask!</span>
+                <span>Just ask — your household assistant is ready.</span>
               </div>
             )}
             {isRunning && (
