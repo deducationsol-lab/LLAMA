@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "dev:api": "node --env-file-if-exists=/vercel/share/.env.project --env-file-if-exists=.env.local --env-file-if-exists=server/.env server/index.js",
     "start": "node --env-file-if-exists=/vercel/share/.env.project --env-file-if-exists=.env.local --env-file-if-exists=server/.env server/index.js",
+    "check:auth": "node scripts/check-auth.mjs",
     "check:agent": "node --env-file-if-exists=/vercel/share/.env.project scripts/check-agent.mjs"
   },
   "dependencies": {

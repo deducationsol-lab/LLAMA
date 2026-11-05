@@ -27,6 +27,7 @@ import {
   Gift,
 } from "lucide-react";
 import { supabase, isSupabaseConfigured } from "./lib/supabase";
+import { googleSignInOptions, emailConfirmationOptions, authErrorMessage } from "./lib/auth";
 
 const nowTime = () => new Date().toTimeString().slice(0, 8);
 const uid = () => Date.now() + Math.random().toString(16).slice(2);
@@ -306,6 +307,10 @@ export default function App() {
   const [authName, setAuthName] = useState("");
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
+  const [authNotice, setAuthNotice] = useState("");
+  const [confirmationEmail, setConfirmationEmail] = useState("");
+  const [resendAfter, setResendAfter] = useState(0);
+  const [resendSeconds, setResendSeconds] = useState(0);
   const [householdName, setHouseholdName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [householdError, setHouseholdError] = useState("");
@@ -316,11 +321,22 @@ export default function App() {
       feedbackRef.current?.scrollIntoView({ block: "start" });
   }, [agentError, agentResult, isRunning]);
 
-  // Check Supabase auth
+  useEffect(() => {
+    const updateCountdown = () => setResendSeconds(Math.max(0, Math.ceil((resendAfter - Date.now()) / 1000)));
+    updateCountdown();
+    const timer = setInterval(updateCountdown, 1000);
+    return () => clearInterval(timer);
+  }, [resendAfter]);
+
+  // Check Supabase auth. The browser SDK processes the OAuth/email callback.
   useEffect(() => {
     if (!isSupabaseConfigured) return;
     
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.initialize().then(({ error }) => {
+      if (error) setAuthError(authErrorMessage(error));
+    });
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) setAuthError(authErrorMessage(error));
       setUser(session?.user ?? null);
       if (session?.user) fetchHousehold(session.user.id);
     });
@@ -360,17 +376,20 @@ export default function App() {
       return;
     }
     setAuthError("");
+    setAuthNotice("");
     setAuthLoading(true);
     try {
       if (authMode === "signup") {
         const { data, error } = await supabase.auth.signUp({
           email: authEmail,
           password: authPassword,
-          options: { data: { display_name: authName } }
+          options: { data: { display_name: authName }, ...emailConfirmationOptions(window.location.origin) }
         });
         if (error) throw error;
         if (data.user && !data.session) {
-          setAuthError("Check your email to confirm your account, then sign in.");
+          setConfirmationEmail(authEmail.trim());
+          setResendAfter(Date.now() + 60_000);
+          setAuthNotice("Check your email and spam folder for a confirmation link. If this address is eligible, a link has been requested. You can also continue with Google instead.");
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -380,7 +399,45 @@ export default function App() {
         if (error) throw error;
       }
     } catch (err) {
-      setAuthError(err.message);
+      if (err.code === "email_not_confirmed") setConfirmationEmail(authEmail.trim());
+      setAuthError(authErrorMessage(err));
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (!supabase || authLoading) return;
+    setAuthError("");
+    setAuthNotice("");
+    setAuthLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth(googleSignInOptions(window.location.origin));
+      if (error) throw error;
+      // Successful calls navigate away to Google; the SDK restores the session on return.
+    } catch (error) {
+      setAuthError(authErrorMessage(error));
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!supabase || !confirmationEmail || authLoading || Date.now() < resendAfter) return;
+    setAuthError("");
+    setAuthNotice("");
+    setAuthLoading(true);
+    setResendAfter(Date.now() + 60_000);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: confirmationEmail,
+        options: emailConfirmationOptions(window.location.origin),
+      });
+      if (error) throw error;
+      setAuthNotice("Confirmation requested. Check your email and spam folder. If it still doesn't arrive, try Google or contact support; repeated resends may be rate-limited.");
+    } catch (error) {
+      setAuthError(authErrorMessage(error));
     } finally {
       setAuthLoading(false);
     }
@@ -614,15 +671,41 @@ export default function App() {
             </div>
           </div>
 
+          <button
+            type="button"
+            className="button auth-google"
+            onClick={handleGoogleSignIn}
+            disabled={authLoading}
+          >
+            Continue with Google
+          </button>
+          <p className="auth-google-note">Sign up or sign in with your Google account. No separate email confirmation.</p>
+          <div className="auth-divider"><span>or use email</span></div>
+
+          {authError && <p className="auth-error" role="alert">{authError}</p>}
+          {authNotice && <p className="auth-notice" role="status">{authNotice}</p>}
+          {confirmationEmail && (
+            <button
+              type="button"
+              className="button ghost auth-resend"
+              disabled={authLoading || resendSeconds > 0}
+              onClick={handleResendConfirmation}
+            >
+              Resend confirmation to {confirmationEmail}{resendSeconds > 0 ? ` (${resendSeconds}s)` : ""}
+            </button>
+          )}
+
           <div className="auth-tabs">
             <button
               className={authMode === "signin" ? "active" : ""}
+              disabled={authLoading}
               onClick={() => setAuthMode("signin")}
             >
               <LogIn size={16} /> Sign in
             </button>
             <button
               className={authMode === "signup" ? "active" : ""}
+              disabled={authLoading}
               onClick={() => setAuthMode("signup")}
             >
               <UserPlus size={16} /> Create account
@@ -674,7 +757,6 @@ export default function App() {
                 />
               </div>
             </div>
-            {authError && <p className="auth-error" role="alert">{authError}</p>}
             <button type="submit" className="button primary auth-submit" disabled={authLoading}>
               {authLoading ? "Please wait…" : authMode === "signup" ? "Create free account" : "Sign in"}
             </button>

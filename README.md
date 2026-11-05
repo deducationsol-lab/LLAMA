@@ -23,7 +23,7 @@ LLAMA is now **free for everyone** — no demo codes, no paywalls:
 
 - **🆓 Free AI**: Powered by LLAMA AI (free tier) — 10 requests/minute, no API key needed from users
 - **👨‍👩‍👧‍👦 Household Connect**: Create or join a household to save and share with family
-- **🔐 Simple Auth**: Sign up with email or continue as guest to try instantly
+- **🔐 Simple Auth**: Continue with Google, sign up with email, or continue as guest to try instantly
 - **💾 Persistent Storage**: Household data saved to Supabase (when connected)
 - **🎨 Same Beautiful UI**: All your favorite features, now accessible to all
 
@@ -83,6 +83,12 @@ npm run dev
 4. That's it — LLAMA will use LLAMA AI for all AI suggestions
 
 ---
+
+## Authentication
+
+Google signup requires enabling the provider in Supabase and configuring Google OAuth.
+See [authentication setup and missing-email diagnostics](docs/authentication.md).
+Google client secrets and SMTP credentials belong only in Supabase, never the frontend.
 
 ## 🏠 Household Features
 
@@ -150,6 +156,7 @@ npm run dev
 ## 🧪 Checks
 
 ```bash
+npm run check:auth   # Offline Google/email auth checks
 npm run check:agent  # Test AI handler
 npm run build        # Production build
 ```

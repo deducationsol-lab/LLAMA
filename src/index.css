@@ -2124,6 +2124,45 @@ button:disabled {
   line-height: 1.6;
 }
 
+.auth-google {
+  width: 100%;
+  padding: 13px;
+  background: white;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.auth-google-note {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.6;
+  text-align: center;
+  color: var(--muted);
+}
+
+.auth-notice {
+  background: #eef8f0;
+  color: #225736;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.auth-resend {
+  width: 100%;
+  margin-bottom: 16px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.auth-error {
+  margin-bottom: 16px;
+}
+
 .auth-submit {
   width: 100%;
   padding: 13px;
