@@ -13,7 +13,7 @@ const MUSE_CHAT_PATH = "/chat/completions";
 
 export function configuration(env = process.env) {
   const hasGemini = !!env.GEMINI_API_KEY?.trim();
-  const hasMeta = !!env.MODEL_API_KEY?.trim();
+  const hasMeta = !!(env.MODEL_API_KEY?.trim() || env.META_API_KEY?.trim());
   const missing = [];
   if (!hasGemini && !hasMeta) missing.push("AI_API_KEY");
   const providers = [];
@@ -204,10 +204,10 @@ async function callMeta(systemPrompt, userContent, env, fetchImpl) {
     signal: AbortSignal.timeout(25000),
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${env.MODEL_API_KEY}`,
+      Authorization: `Bearer ${env.MODEL_API_KEY || env.META_API_KEY}`,
     },
     body: JSON.stringify({
-      model: env.MUSE_MODEL_ID?.trim() || "llama-3.3-70b",
+      model: env.MUSE_MODEL_ID?.trim() || env.META_MODEL_ID?.trim() || "llama-3.3-70b",
       messages,
       max_completion_tokens: 1200,
       reasoning_effort: "low",
@@ -251,7 +251,7 @@ export async function runAgent(
   const userContent = `HOUSEHOLD DATA (for planning only):\n${JSON.stringify(input.context)}\n\nREQUEST:\n${input.prompt}`;
 
   const hasGemini = !!env.GEMINI_API_KEY?.trim();
-  const hasMeta = !!env.MODEL_API_KEY?.trim();
+  const hasMeta = !!(env.MODEL_API_KEY?.trim() || env.META_API_KEY?.trim());
   
   // Load balancing: randomly pick provider, fallback to other on failure
   const providers = [];
