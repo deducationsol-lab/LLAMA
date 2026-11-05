@@ -370,7 +370,7 @@ export default function App() {
         });
         if (error) throw error;
         if (data.user && !data.session) {
-          setAuthError("Check your email to confirm your account, then sign in.");
+          setAuthError("Account created! Check your email (including spam) to confirm, then sign in. Supabase free tier limits to 3 emails/hour — if you don't see it in 2 minutes, try resending or continue as guest.");
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -674,7 +674,28 @@ export default function App() {
                 />
               </div>
             </div>
-            {authError && <p className="auth-error" role="alert">{authError}</p>}
+            {authError && (
+              <div className="auth-error-wrap" role="alert">
+                <p className="auth-error">{authError}</p>
+                {authError.includes("Check your email") && (
+                  <button
+                    type="button"
+                    className="button ghost small"
+                    onClick={async () => {
+                      if (!authEmail) return;
+                      setAuthError("");
+                      const { error } = await supabase.auth.resend({
+                        type: "signup",
+                        email: authEmail,
+                      });
+                      setAuthError(error ? error.message : "Resent! Check email & spam (3/hour limit).");
+                    }}
+                  >
+                    Resend confirmation email
+                  </button>
+                )}
+              </div>
+            )}
             <button type="submit" className="button primary auth-submit" disabled={authLoading}>
               {authLoading ? "Please wait…" : authMode === "signup" ? "Create free account" : "Sign in"}
             </button>
