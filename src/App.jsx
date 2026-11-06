@@ -73,158 +73,10 @@ const INITIAL_AGENTS = [
   },
 ];
 
-const INITIAL_TRAVEL = [
-  {
-    day: "Day 1",
-    title: "Arrival & Georgetown Heritage Walk",
-    cost: 350,
-    status: "Sample",
-    notes:
-      "Example only: explore Georgetown and local food. Flights and accommodation are not booked.",
-  },
-  {
-    day: "Day 2",
-    title: "Penang Hill Funicular & Entopia Butterfly Park",
-    cost: 420,
-    status: "Sample",
-    notes:
-      "Example only: consider Penang Hill and Entopia. Verify opening times, ticket prices and school dates.",
-  },
-  {
-    day: "Day 3",
-    title: "Batu Ferringhi Beach & Culinary Souvenirs",
-    cost: 380,
-    status: "Sample",
-    notes: "Seafood lunch at Teluk Bahang, souvenirs at Chowrasta Market.",
-  },
-];
-
-const INITIAL_BILLS = [
-  {
-    id: 1,
-    name: "Home Internet (Unifi 300Mbps)",
-    amount: 139.0,
-    dueDate: "Nov 05",
-    status: "PENDING",
-    category: "Utilities",
-    agentNote: "Sample bill · no bank connected",
-  },
-  {
-    id: 2,
-    name: "Electricity (TNB Utility)",
-    amount: 185.5,
-    dueDate: "Nov 08",
-    status: "PENDING",
-    category: "Utilities",
-    agentNote: "Peak usage +12% vs last month",
-  },
-  {
-    id: 3,
-    name: "School Bus & Tuition Fee",
-    amount: 450.0,
-    dueDate: "Nov 01",
-    status: "PAID",
-    category: "Education",
-    agentNote: "Sample paid status · not verified",
-  },
-  {
-    id: 4,
-    name: "Car Loan Installment",
-    amount: 680.0,
-    dueDate: "Nov 12",
-    status: "PENDING",
-    category: "Finance",
-    agentNote: "Sample bill · balance not checked",
-  },
-];
-
-const INITIAL_GROCERIES = [
-  {
-    id: 1,
-    name: "Fresh Chicken Breast (1kg)",
-    category: "Proteins",
-    inPantry: false,
-    estPrice: 22.0,
-    recipeNeeded: "Nasi Ayam & Stir-Fry",
-  },
-  {
-    id: 2,
-    name: "Organic Eggs (30s pack)",
-    category: "Dairy & Eggs",
-    inPantry: true,
-    estPrice: 18.5,
-    recipeNeeded: "Breakfast & Baking",
-  },
-  {
-    id: 3,
-    name: "Fresh Spinach & Bok Choy",
-    category: "Produce",
-    inPantry: false,
-    estPrice: 8.0,
-    recipeNeeded: "Daily Greens",
-  },
-  {
-    id: 4,
-    name: "Basmati Rice (5kg)",
-    category: "Staples",
-    inPantry: true,
-    estPrice: 38.0,
-    recipeNeeded: "Dinner Staples",
-  },
-  {
-    id: 5,
-    name: "Soy Sauce & Cooking Oil",
-    category: "Condiments",
-    inPantry: false,
-    estPrice: 19.5,
-    recipeNeeded: "Pantry Refresh",
-  },
-];
-
-const INITIAL_SCHEDULE = [
-  {
-    time: "06:30 - 07:15",
-    task: "Morning Routine & Healthy Breakfast",
-    category: "Wellness",
-    focus: "Low stress",
-  },
-  {
-    time: "07:15 - 08:00",
-    task: "School Run Drop-off",
-    category: "Family",
-    focus: "Routine traffic window",
-  },
-  {
-    time: "08:30 - 12:30",
-    task: "Deep Work Block: Core Project Development",
-    category: "Work",
-    focus: "High focus / No notifications",
-  },
-  {
-    time: "12:30 - 13:30",
-    task: "Lunch & Quick Pantry Check",
-    category: "Wellness",
-    focus: "Meal prep",
-  },
-  {
-    time: "14:00 - 17:00",
-    task: "Work Block & Agent Swarm Review",
-    category: "Work",
-    focus: "Collaborative tasks",
-  },
-  {
-    time: "17:30 - 18:30",
-    task: "School Pick-up & Park Walk with Kids",
-    category: "Family",
-    focus: "Active outdoor time",
-  },
-  {
-    time: "21:30 - 22:30",
-    task: "Wind-down & Reading (Target Bedtime 22:30)",
-    category: "Wellness",
-    focus: "Optimal 8h sleep prep",
-  },
-];
+const INITIAL_TRAVEL = [];
+const INITIAL_BILLS = [];
+const INITIAL_GROCERIES = [];
+const INITIAL_SCHEDULE = [];
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("feeds");
@@ -234,19 +86,45 @@ export default function App() {
   const [newGrocery, setNewGrocery] = useState("");
 
   const agents = INITIAL_AGENTS;
-  const [travelItinerary] = useState(INITIAL_TRAVEL);
-  const [bills, setBills] = useState(INITIAL_BILLS);
-  const [groceries, setGroceries] = useState(INITIAL_GROCERIES);
-  const [schedule] = useState(INITIAL_SCHEDULE);
-
-  const [userPreferences, setUserPreferences] = useState({
+  const getUserKey = (key) => user ? `llama_${user.id}_${key}` : `llama_guest_${key}`;
+  const loadUserData = (key, fallback) => {
+    try {
+      const raw = localStorage.getItem(getUserKey(key));
+      return raw ? JSON.parse(raw) : fallback;
+    } catch { return fallback; }
+  };
+  const [travelItinerary, setTravelItinerary] = useState(() => loadUserData("travel", INITIAL_TRAVEL));
+  const [bills, setBills] = useState(() => loadUserData("bills", INITIAL_BILLS));
+  const [groceries, setGroceries] = useState(() => loadUserData("groceries", INITIAL_GROCERIES));
+  const [schedule, setSchedule] = useState(() => loadUserData("schedule", INITIAL_SCHEDULE));
+  const [userPreferences, setUserPreferences] = useState(() => loadUserData("prefs", {
     familySize: 4,
     monthlyBudgetCap: 5000,
     dietary: "Halal / Low-Sugar",
     homeLocation: "Kuala Lumpur",
     targetSleepDuration: "8 Hours",
     travelBudgetLimit: 1500,
-  });
+  }));
+
+  // Persist per-user data
+  useEffect(() => { if (user) localStorage.setItem(getUserKey("travel"), JSON.stringify(travelItinerary)); }, [travelItinerary, user?.id]);
+  useEffect(() => { if (user) localStorage.setItem(getUserKey("bills"), JSON.stringify(bills)); }, [bills, user?.id]);
+  useEffect(() => { if (user) localStorage.setItem(getUserKey("groceries"), JSON.stringify(groceries)); }, [groceries, user?.id]);
+  useEffect(() => { if (user) localStorage.setItem(getUserKey("schedule"), JSON.stringify(schedule)); }, [schedule, user?.id]);
+  useEffect(() => { if (user) localStorage.setItem(getUserKey("prefs"), JSON.stringify(userPreferences)); }, [userPreferences, user?.id]);
+
+  // Reload when user changes (fresh dashboard per user)
+  useEffect(() => {
+    if (!user) return;
+    setTravelItinerary(loadUserData("travel", INITIAL_TRAVEL));
+    setBills(loadUserData("bills", INITIAL_BILLS));
+    setGroceries(loadUserData("groceries", INITIAL_GROCERIES));
+    setSchedule(loadUserData("schedule", INITIAL_SCHEDULE));
+    setUserPreferences(loadUserData("prefs", {
+      familySize: 4, monthlyBudgetCap: 5000, dietary: "Halal / Low-Sugar",
+      homeLocation: "Kuala Lumpur", targetSleepDuration: "8 Hours", travelBudgetLimit: 1500,
+    }));
+  }, [user?.id]);
 
   const logBoxRef = useRef(null);
 
@@ -1273,60 +1151,57 @@ export default function App() {
               <div className="view-banner lavender">
                 <div>
                   <span className="eyebrow">YOUR NEXT CHAPTER</span>
-                  <h2>Three days. All Penang.</h2>
+                  <h2>Your travel plans</h2>
                   <p>
-                    A family of {userPreferences.familySize}, heading out from{" "}
-                    {userPreferences.homeLocation}.
+                    {travelItinerary.length === 0 ? "No trips yet — add your first destination below." : `${travelItinerary.length} destinations · ${rm(travelTotal)} of ${rm(userPreferences.travelBudgetLimit)} budget`}
                   </p>
                 </div>
-                <button
-                  className="button primary"
-                  onClick={triggerTripWorkflow}
-                  disabled={isRunning}
-                >
-                  <Sparkles size={16} /> Suggest a trip
+                <button className="button primary" onClick={triggerTripWorkflow} disabled={isRunning}>
+                  <Sparkles size={16} /> Ask LLAMA for ideas
                 </button>
               </div>
               <div className="budget-line">
-                <strong>
-                  {rm(travelTotal)}{" "}
-                  <span>of {rm(userPreferences.travelBudgetLimit)} budget</span>
-                </strong>
-                <span>
-                  {overTravelBudget ? "Over budget" : "Room to explore"}
-                </span>
+                <strong>{rm(travelTotal)} <span>of {rm(userPreferences.travelBudgetLimit)} budget</span></strong>
+                <span>{overTravelBudget ? "Over budget" : travelItinerary.length === 0 ? "Add trips to track" : "Room to explore"}</span>
               </div>
-              <div
-                className={`budget-track ${overTravelBudget ? "over-budget" : ""}`}
-              >
-                <span
-                  style={{
-                    width: `${Math.min(100, (travelTotal / Math.max(1, userPreferences.travelBudgetLimit)) * 100)}%`,
-                  }}
-                />
+              <div className={`budget-track ${overTravelBudget ? "over-budget" : ""}`}>
+                <span style={{ width: `${Math.min(100, (travelTotal / Math.max(1, userPreferences.travelBudgetLimit)) * 100)}%` }} />
               </div>
-              <div className="trip-grid">
-                {travelItinerary.map((item, i) => (
-                  <article className="panel trip-card" key={item.day}>
-                    <div className={`trip-illustration trip-day-${i}`}>
-                      <Plane size={52} strokeWidth={1.2} />
-                      <span>0{i + 1}</span>
-                    </div>
-                    <div className="trip-body">
-                      <div className="card-meta">
-                        <span>{item.day}</span>
-                        <strong>{rm(item.cost)}</strong>
+              <form className="grocery-form" onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                const title = fd.get("title")?.toString().trim();
+                const cost = Number(fd.get("cost"));
+                const notes = fd.get("notes")?.toString().trim();
+                if (!title) return;
+                setTravelItinerary(prev => [...prev, { day: `Day ${prev.length + 1}`, title, cost: isFinite(cost) ? cost : 0, status: "Planned", notes: notes || "" }]);
+                e.target.reset();
+              }}>
+                <input name="title" placeholder="Destination / activity (e.g. Langkawi beach day)" required style={{flex:2}} />
+                <input name="cost" type="number" placeholder="Cost RM" min="0" step="0.01" style={{flex:1}} />
+                <input name="notes" placeholder="Notes (optional)" style={{flex:2}} />
+                <button className="button primary"><Plus size={16} /> Add</button>
+              </form>
+              {travelItinerary.length === 0 ? (
+                <div className="panel empty-state"><Plane size={28} /><strong>No travel plans yet</strong><p>Add destinations above or ask LLAMA for suggestions.</p></div>
+              ) : (
+                <div className="trip-grid">
+                  {travelItinerary.map((item, i) => (
+                    <article className="panel trip-card" key={item.day + i}>
+                      <div className={`trip-illustration trip-day-${i % 3}`}><Plane size={52} strokeWidth={1.2} /><span>0{i + 1}</span></div>
+                      <div className="trip-body">
+                        <div className="card-meta"><span>{item.day}</span><strong>{rm(item.cost)}</strong></div>
+                        <h3>{item.title}</h3>
+                        <p>{item.notes || "No notes"}</p>
+                        <div style={{display:"flex",gap:8,marginTop:8}}>
+                          <span className="trip-status"><CheckCircle2 size={15} />{item.status}</span>
+                          <button className="icon-button delete-button" aria-label="Remove" onClick={() => setTravelItinerary(p => p.filter((_, idx) => idx !== i))}><Trash2 size={16} /></button>
+                        </div>
                       </div>
-                      <h3>{item.title}</h3>
-                      <p>{item.notes}</p>
-                      <span className="trip-status">
-                        <CheckCircle2 size={15} />
-                        {item.status} · demo itinerary
-                      </span>
-                    </div>
-                  </article>
-                ))}
-              </div>
+                    </article>
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
@@ -1335,20 +1210,28 @@ export default function App() {
               <div className="view-banner peach">
                 <div>
                   <span className="eyebrow">A CLEARER PICTURE</span>
-                  <h2>Small bills. Big peace of mind.</h2>
-                  <p>
-                    {rm(pendingTotal)} pending · Monthly budget{" "}
-                    {rm(userPreferences.monthlyBudgetCap)}
-                  </p>
+                  <h2>Your bills & budget</h2>
+                  <p>{bills.length === 0 ? "No bills yet — add your first bill below." : `${rm(pendingTotal)} pending · Monthly budget ${rm(userPreferences.monthlyBudgetCap)}`}</p>
                 </div>
-                <button
-                  className="button dark"
-                  onClick={triggerBillsWorkflow}
-                  disabled={isRunning}
-                >
-                  <RotateCcw size={16} /> Review bills
-                </button>
+                <button className="button dark" onClick={triggerBillsWorkflow} disabled={isRunning}><RotateCcw size={16} /> Ask LLAMA to review</button>
               </div>
+              <form className="grocery-form" onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                const name = fd.get("name")?.toString().trim();
+                const amount = Number(fd.get("amount"));
+                const dueDate = fd.get("dueDate")?.toString().trim();
+                const category = fd.get("category")?.toString().trim() || "General";
+                if (!name || !isFinite(amount)) return;
+                setBills(prev => [...prev, { id: uid(), name, amount, dueDate: dueDate || "—", status: "PENDING", category, agentNote: "Added by you" }]);
+                e.target.reset();
+              }}>
+                <input name="name" placeholder="Bill name (e.g. Internet, Rent)" required style={{flex:2}} />
+                <input name="amount" type="number" placeholder="Amount RM" min="0" step="0.01" required style={{flex:1}} />
+                <input name="dueDate" placeholder="Due date (e.g. Nov 15)" style={{flex:1}} />
+                <input name="category" placeholder="Category" style={{flex:1}} />
+                <button className="button primary"><Plus size={16} /> Add bill</button>
+              </form>
               <div
                 className="panel table-wrap"
                 role="region"
@@ -1381,17 +1264,11 @@ export default function App() {
                         <td>{bill.dueDate}</td>
                         <td>{bill.agentNote}</td>
                         <td>
-                          <button
-                            className={`bill-status ${bill.status === "PAID" ? "paid" : "pending"}`}
-                            aria-label={`${bill.name}: ${bill.status.toLowerCase()}, click to mark ${bill.status === "PAID" ? "pending" : "paid"}`}
-                            onClick={() => toggleBill(bill.id)}
-                          >
-                            {bill.status === "PAID" && (
-                              <CheckCircle2 size={13} />
-                            )}
-                            {bill.status.toLowerCase()}
+                          <button className={`bill-status ${bill.status === "PAID" ? "paid" : "pending"}`} onClick={() => toggleBill(bill.id)}>
+                            {bill.status === "PAID" && <CheckCircle2 size={13} />}{bill.status.toLowerCase()}
                           </button>
                         </td>
+                        <td><button className="icon-button delete-button" onClick={() => setBills(p => p.filter(b => b.id !== bill.id))}><Trash2 size={14} /></button></td>
                       </tr>
                     ))}
                   </tbody>
@@ -1526,34 +1403,42 @@ export default function App() {
             <section className="view-section">
               <div className="view-banner butter">
                 <div>
-                  <span className="eyebrow">FIND YOUR EVERYDAY RHYTHM</span>
-                  <h2>Make time for a little balance.</h2>
-                  <p>
-                    {userPreferences.homeLocation} · Sleep target:{" "}
-                    {userPreferences.targetSleepDuration}
-                  </p>
+                  <span className="eyebrow">YOUR DAILY RHYTHM</span>
+                  <h2>Your routine</h2>
+                  <p>{schedule.length === 0 ? "No routine yet — add your first time block below." : `${userPreferences.homeLocation} · Sleep target: ${userPreferences.targetSleepDuration}`}</p>
                 </div>
                 <Clock size={48} strokeWidth={1.3} />
               </div>
-              <div className="schedule-list">
-                {schedule.map((block, i) => (
-                  <article className="panel schedule-item" key={block.time}>
-                    <span className="schedule-number">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <time>{block.time}</time>
-                    <div>
-                      <h3>{block.task}</h3>
-                      <p>{block.focus}</p>
-                    </div>
-                    <span
-                      className={`category-tag ${block.category === "Work" ? "lavender" : block.category === "Family" ? "peach" : "lime"}`}
-                    >
-                      {block.category}
-                    </span>
-                  </article>
-                ))}
-              </div>
+              <form className="grocery-form" onSubmit={(e) => {
+                e.preventDefault();
+                const fd = new FormData(e.target);
+                const time = fd.get("time")?.toString().trim();
+                const task = fd.get("task")?.toString().trim();
+                const category = fd.get("category")?.toString().trim() || "General";
+                if (!time || !task) return;
+                setSchedule(prev => [...prev, { time, task, category, focus: "" }]);
+                e.target.reset();
+              }}>
+                <input name="time" placeholder="Time (e.g. 08:00 - 09:00)" required style={{flex:1}} />
+                <input name="task" placeholder="Activity (e.g. Morning workout)" required style={{flex:2}} />
+                <input name="category" placeholder="Category (Work/Family/Wellness)" style={{flex:1}} />
+                <button className="button primary"><Plus size={16} /> Add block</button>
+              </form>
+              {schedule.length === 0 ? (
+                <div className="panel empty-state"><Clock size={28} /><strong>No routine yet</strong><p>Add time blocks above to build your day.</p></div>
+              ) : (
+                <div className="schedule-list">
+                  {schedule.map((block, i) => (
+                    <article className="panel schedule-item" key={block.time + i}>
+                      <span className="schedule-number">{String(i + 1).padStart(2, "0")}</span>
+                      <time>{block.time}</time>
+                      <div><h3>{block.task}</h3><p>{block.focus || block.category}</p></div>
+                      <span className={`category-tag ${block.category === "Work" ? "lavender" : block.category === "Family" ? "peach" : "lime"}`}>{block.category}</span>
+                      <button className="icon-button delete-button" onClick={() => setSchedule(p => p.filter((_, idx) => idx !== i))}><Trash2 size={16} /></button>
+                    </article>
+                  ))}
+                </div>
+              )}
             </section>
           )}
 
