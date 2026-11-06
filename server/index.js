@@ -6,11 +6,13 @@ import { auth } from "./auth.js";
 const server = createServer(async (req, res) => {
   if (req.url?.split("?")[0] === "/api/agent") return handler(req, res);
   if (req.url?.startsWith("/api/auth")) {
+    let body = "";
+    for await (const chunk of req) body += chunk;
     const url = new URL(req.url, `http://${req.headers.host}`);
     const request = new Request(url.toString(), {
       method: req.method,
       headers: req.headers,
-      body: req.method !== "GET" && req.method !== "HEAD" ? JSON.stringify(req.body) : undefined,
+      body: body || undefined,
     });
     const response = await auth.handler(request);
     res.writeHead(response.status, Object.fromEntries(response.headers.entries()));

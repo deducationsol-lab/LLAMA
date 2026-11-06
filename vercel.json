@@ -26,6 +26,10 @@
     {
       "source": "/api/agent",
       "destination": "/api/agent.js"
+    },
+    {
+      "source": "/api/auth/:path*",
+      "destination": "/api/auth/[...all].js"
     }
   ]
 }
