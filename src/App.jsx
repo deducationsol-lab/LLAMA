@@ -572,9 +572,9 @@ export default function App() {
   ];
   const currentTab = TABS.find((tab) => tab.id === activeTab);
 
-  // Auth gate - show welcome screen if not logged in and Supabase is configured
-  const showAuthGate = isSupabaseConfigured && !user;
-  const showHouseholdGate = isSupabaseConfigured && user && showHouseholdSetup;
+  // Auth gate - show welcome screen if not logged in
+  const showAuthGate = !user;
+  const showHouseholdGate = user && showHouseholdSetup;
 
   if (showAuthGate) {
     return (
