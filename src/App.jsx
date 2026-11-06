@@ -26,7 +26,7 @@ import {
   Crown,
   Gift,
 } from "lucide-react";
-import { supabase, isSupabaseConfigured } from "./lib/supabase";
+import { authClient } from "../lib/auth-client";
 
 const nowTime = () => new Date().toTimeString().slice(0, 8);
 const uid = () => Date.now() + Math.random().toString(16).slice(2);
@@ -316,37 +316,19 @@ export default function App() {
       feedbackRef.current?.scrollIntoView({ block: "start" });
   }, [agentError, agentResult, isRunning]);
 
-  // Check Supabase auth
+  // Check Better Auth session - instant signup, no email limits
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
-    
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) fetchHousehold(session.user.id);
+    authClient.getSession().then(({ data }) => {
+      setUser(data?.user ?? null);
+      if (data?.user) fetchHousehold(data.user.id);
     });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchHousehold(session.user.id);
-      } else {
-        setHousehold(null);
-      }
-    });
-
-    return () => subscription.unsubscribe();
   }, []);
 
   const fetchHousehold = async (userId) => {
-    if (!supabase) return;
-    const { data } = await supabase
-      .from("household_members")
-      .select("household_id, households(name)")
-      .eq("user_id", userId)
-      .single();
-    
-    if (data) {
-      setHousehold({ id: data.household_id, name: data.households.name });
+    // Household stored locally for now - instant, no DB required
+    const saved = localStorage.getItem(`household_${userId}`);
+    if (saved) {
+      setHousehold(JSON.parse(saved));
       setShowHouseholdSetup(false);
     } else {
       setShowHouseholdSetup(true);
@@ -355,29 +337,29 @@ export default function App() {
 
   const handleAuth = async (e) => {
     e.preventDefault();
-    if (!supabase) {
-      setAuthError("Authentication not configured. You can continue as guest.");
-      return;
-    }
     setAuthError("");
     setAuthLoading(true);
     try {
       if (authMode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
+        const { error } = await authClient.signUp.email({
           email: authEmail,
           password: authPassword,
-          options: { data: { display_name: authName } }
+          name: authName || authEmail.split("@")[0],
         });
-        if (error) throw error;
-        if (data.user && !data.session) {
-          setAuthError("Account created! Check your email (including spam) to confirm, then sign in. Supabase free tier limits to 3 emails/hour — if you don't see it in 2 minutes, try resending or continue as guest.");
-        }
+        if (error) throw new Error(error.message);
+        // Instant signup - no email confirmation needed!
+        const { data } = await authClient.getSession();
+        setUser(data?.user ?? null);
+        if (data?.user) fetchHousehold(data.user.id);
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error } = await authClient.signIn.email({
           email: authEmail,
           password: authPassword,
         });
-        if (error) throw error;
+        if (error) throw new Error(error.message);
+        const { data } = await authClient.getSession();
+        setUser(data?.user ?? null);
+        if (data?.user) fetchHousehold(data.user.id);
       }
     } catch (err) {
       setAuthError(err.message);
@@ -387,22 +369,19 @@ export default function App() {
   };
 
   const handleSignOut = async () => {
-    if (supabase) await supabase.auth.signOut();
+    await authClient.signOut();
     setUser(null);
     setHousehold(null);
   };
 
   const handleCreateHousehold = async (e) => {
     e.preventDefault();
-    if (!supabase || !user) return;
+    if (!user) return;
     setHouseholdError("");
     try {
-      const { data, error } = await supabase.rpc("create_household", {
-        household_name: householdName,
-        member_name: authName || user.email?.split("@")[0] || "Member"
-      });
-      if (error) throw error;
-      setHousehold({ id: data, name: householdName });
+      const newHousehold = { id: `hh_${Date.now()}`, name: householdName };
+      localStorage.setItem(`household_${user.id}`, JSON.stringify(newHousehold));
+      setHousehold(newHousehold);
       setShowHouseholdSetup(false);
       setHouseholdName("");
     } catch (err) {
@@ -412,17 +391,13 @@ export default function App() {
 
   const handleJoinHousehold = async (e) => {
     e.preventDefault();
-    if (!supabase || !user) return;
+    if (!user) return;
     setHouseholdError("");
     try {
-      const { data, error } = await supabase.rpc("join_household", {
-        invite_token: inviteCode,
-        member_name: authName || user.email?.split("@")[0] || "Member"
-      });
-      if (error) throw error;
-      // Fetch household name
-      const { data: hData } = await supabase.from("households").select("name").eq("id", data).single();
-      setHousehold({ id: data, name: hData?.name || "Household" });
+      // Simple invite code - in production, validate against server
+      const newHousehold = { id: inviteCode, name: "Joined Household" };
+      localStorage.setItem(`household_${user.id}`, JSON.stringify(newHousehold));
+      setHousehold(newHousehold);
       setShowHouseholdSetup(false);
       setInviteCode("");
     } catch (err) {
@@ -674,28 +649,7 @@ export default function App() {
                 />
               </div>
             </div>
-            {authError && (
-              <div className="auth-error-wrap" role="alert">
-                <p className="auth-error">{authError}</p>
-                {authError.includes("Check your email") && (
-                  <button
-                    type="button"
-                    className="button ghost small"
-                    onClick={async () => {
-                      if (!authEmail) return;
-                      setAuthError("");
-                      const { error } = await supabase.auth.resend({
-                        type: "signup",
-                        email: authEmail,
-                      });
-                      setAuthError(error ? error.message : "Resent! Check email & spam (3/hour limit).");
-                    }}
-                  >
-                    Resend confirmation email
-                  </button>
-                )}
-              </div>
-            )}
+            {authError && <p className="auth-error" role="alert">{authError}</p>}
             <button type="submit" className="button primary auth-submit" disabled={authLoading}>
               {authLoading ? "Please wait…" : authMode === "signup" ? "Create free account" : "Sign in"}
             </button>
