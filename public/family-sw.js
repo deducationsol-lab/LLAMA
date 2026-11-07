@@ -17,6 +17,11 @@ self.addEventListener("push", (event) => {
       } catch {
         /* Storage failure must not suppress a household alert. */
       }
+      try {
+        const pages = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+        const visible = pages.find(page => page.visibilityState === "visible");
+        if (sound && visible) visible.postMessage({ type: "llama-household-alert" });
+      } catch { /* In-app audio must never prevent system notifications. */ }
       return self.registration.showNotification("LLAMA household", {
         body: data.body || "Open LLAMA to view your household update.",
         icon: "/llama-logo.png",

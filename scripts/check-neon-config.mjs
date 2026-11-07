@@ -42,8 +42,10 @@ const source = await readFile(
 for (const enabled of [true, false, undefined]) {
   const listeners = {};
   const received = [];
+  const messages = [];
   const context = {
     self: {
+      clients: { matchAll: async () => [{ visibilityState: "visible", postMessage: message => messages.push(message) }] },
       addEventListener: (name, fn) => {
         listeners[name] = fn;
       },
@@ -69,6 +71,7 @@ for (const enabled of [true, false, undefined]) {
   });
   await work;
   assert.equal(received.length, 1);
+  assert.equal(messages.length, enabled === false ? 0 : 1);
   assert.equal(received[0].options.silent, enabled === false);
   assert.equal(received[0].options.renotify, true);
 }

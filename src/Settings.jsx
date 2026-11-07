@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   getNotificationSound,
+  previewLlamaSound,
   setNotificationSound,
   testDeviceNotification,
 } from "./lib/notification-sound";
@@ -550,6 +551,8 @@ export default function Settings({
           Notifications {pushOn ? "On — turn off" : "Off — turn on"}
         </button>
         <div className="sound-settings">
+          <button className="button ghost" onClick={() => act(previewLlamaSound, "LLAMA sound enabled for this open page. Background alerts use your device’s system sound.")}>Play & enable LLAMA sound</button>
+          <p className="muted">Your supplied goat sound plays for incoming alerts while LLAMA is visible, after you enable it here. Each new page may require a click. Background/locked-screen notifications use the system sound and cannot use this MP3.</p>
           <label>
             <input
               type="checkbox"

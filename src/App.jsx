@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { authClient } from "../lib/auth-client";
 import Settings from "./Settings";
+import { listenForHouseholdSound } from "./lib/notification-sound";
 import InfoPage from "./InfoPage";
 import { familyRequest, disableDevicePush } from "./lib/family-client";
 
@@ -84,6 +85,7 @@ const INITIAL_GROCERIES = [];
 const INITIAL_SCHEDULE = [];
 
 export default function App() {
+  useEffect(() => listenForHouseholdSound(), []);
   const [activeTab, setActiveTab] = useState("feeds");
   const [logs, setLogs] = useState([]);
   const [autoScroll, setAutoScroll] = useState(true);

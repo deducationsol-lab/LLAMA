@@ -64,3 +64,7 @@ Before promoting:
 6. Check Settings, FAQ and Privacy Policy on desktop/mobile and signed out. Review and fill in the privacy contact before a public launch.
 
 Production remains unchanged until separately approved for rollout.
+
+## Uploaded LLAMA sound
+
+The user-supplied `dragon-studio-goat-baa-390303.mp3` is bundled as `/sounds/llama-alert.mp3`. In Settings, **Play & enable LLAMA sound** directly plays/unlocks it in the open page. Incoming service-worker pushes message one visible LLAMA window; that page plays the MP3 only if previously unlocked, visible, and the device sound preference is enabled. Browser autoplay restrictions are respected, not bypassed. Background or locked-screen notifications retain the browser/OS system sound; Web Push cannot install an MP3 as a system ringtone. Playback failure does not suppress the native notification. This audio integration does not fix a 503 family/push backend or prove physical-device delivery.
