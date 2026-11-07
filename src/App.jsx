@@ -88,6 +88,12 @@ export default function App() {
   const agents = INITIAL_AGENTS;
 
   // Auth & Household state - must be before dashboard data that depends on user
+  const [authMode, setAuthMode] = useState("signin");
+  const [authName, setAuthName] = useState("");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [household, setHousehold] = useState(null);
   const [householdMembers, setHouseholdMembers] = useState([]);
