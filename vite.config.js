@@ -28,6 +28,16 @@ export default defineConfig({
       name: "llama-api",
       configureServer(server) {
         server.middlewares.use(async (req, res, next) => {
+          if (req.url?.startsWith("/api/family")) {
+            const { auth, pool } = await import("./server/auth.js");
+            const { createFamilyHandler } = await import("./server/family-handler.js");
+            return createFamilyHandler(auth, pool)(req, res);
+          }
+          if (req.url?.startsWith("/api/auth")) {
+            const { auth } = await import("./server/auth.js");
+            const { toNodeHandler } = await import("better-auth/node");
+            return toNodeHandler(auth)(req, res);
+          }
           if (req.url?.startsWith("/api/agent")) {
             const handler = (await import("./api/agent.js")).default;
             return handler(req, res);

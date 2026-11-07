@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "dev:api": "node --env-file-if-exists=/vercel/share/.env.project --env-file-if-exists=.env.local --env-file-if-exists=server/.env server/index.js",
     "start": "node --env-file-if-exists=/vercel/share/.env.project --env-file-if-exists=.env.local --env-file-if-exists=server/.env server/index.js",
-    "check:agent": "node --env-file-if-exists=/vercel/share/.env.project scripts/check-agent.mjs"
+    "check:agent": "node --env-file-if-exists=/vercel/share/.env.project scripts/check-agent.mjs",
+    "check:family": "node scripts/check-family.mjs && node scripts/check-settings-render.mjs"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "^5.3.0",
@@ -19,9 +20,11 @@
     "lucide-react": "^0.469.0",
     "pg": "^8.23.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15",
     "@types/pg": "^8.23.1",
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",

@@ -30,6 +30,16 @@
     {
       "source": "/api/auth/:path*",
       "destination": "/api/auth/[...all].js"
+    },
+    {
+      "source": "/api/family",
+      "destination": "/api/family.js"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/family-push",
+      "schedule": "* * * * *"
     }
   ]
 }
