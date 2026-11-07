@@ -86,6 +86,18 @@ export default function App() {
   const [newGrocery, setNewGrocery] = useState("");
 
   const agents = INITIAL_AGENTS;
+
+  // Auth & Household state - must be before dashboard data that depends on user
+  const [user, setUser] = useState(null);
+  const [household, setHousehold] = useState(null);
+  const [householdMembers, setHouseholdMembers] = useState([]);
+  const [showHouseholdSetup, setShowHouseholdSetup] = useState(false);
+  const [householdName, setHouseholdName] = useState("");
+  const [inviteCode, setInviteCode] = useState("");
+  const [householdError, setHouseholdError] = useState("");
+  const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberRole, setNewMemberRole] = useState("");
+
   const getUserKey = (key) => user ? `llama_${user.id}_${key}` : `llama_guest_${key}`;
   const loadUserData = (key, fallback) => {
     try {
@@ -93,28 +105,20 @@ export default function App() {
       return raw ? JSON.parse(raw) : fallback;
     } catch { return fallback; }
   };
-  const [travelItinerary, setTravelItinerary] = useState(() => loadUserData("travel", INITIAL_TRAVEL));
-  const [bills, setBills] = useState(() => loadUserData("bills", INITIAL_BILLS));
-  const [groceries, setGroceries] = useState(() => loadUserData("groceries", INITIAL_GROCERIES));
-  const [schedule, setSchedule] = useState(() => loadUserData("schedule", INITIAL_SCHEDULE));
-  const [userPreferences, setUserPreferences] = useState(() => loadUserData("prefs", {
+  const [travelItinerary, setTravelItinerary] = useState(INITIAL_TRAVEL);
+  const [bills, setBills] = useState(INITIAL_BILLS);
+  const [groceries, setGroceries] = useState(INITIAL_GROCERIES);
+  const [schedule, setSchedule] = useState(INITIAL_SCHEDULE);
+  const [userPreferences, setUserPreferences] = useState({
     familySize: 4,
     monthlyBudgetCap: 5000,
     dietary: "Halal / Low-Sugar",
     homeLocation: "Kuala Lumpur",
     targetSleepDuration: "8 Hours",
     travelBudgetLimit: 1500,
-  }));
+  });
 
-  // Persist per-user data
-  useEffect(() => { if (user) localStorage.setItem(getUserKey("travel"), JSON.stringify(travelItinerary)); }, [travelItinerary, user?.id]);
-  useEffect(() => { if (user) localStorage.setItem(getUserKey("bills"), JSON.stringify(bills)); }, [bills, user?.id]);
-  useEffect(() => { if (user) localStorage.setItem(getUserKey("groceries"), JSON.stringify(groceries)); }, [groceries, user?.id]);
-  useEffect(() => { if (user) localStorage.setItem(getUserKey("schedule"), JSON.stringify(schedule)); }, [schedule, user?.id]);
-  useEffect(() => { if (user) localStorage.setItem(getUserKey("prefs"), JSON.stringify(userPreferences)); }, [userPreferences, user?.id]);
-  useEffect(() => { if (user) localStorage.setItem(`llama_members_${user.id}`, JSON.stringify(householdMembers)); }, [householdMembers, user?.id]);
-
-  // Reload when user changes (fresh dashboard per user)
+  // Load per-user data when user signs in
   useEffect(() => {
     if (!user) return;
     setTravelItinerary(loadUserData("travel", INITIAL_TRAVEL));
@@ -127,6 +131,14 @@ export default function App() {
     }));
     try { const raw = localStorage.getItem(`llama_members_${user.id}`); setHouseholdMembers(raw ? JSON.parse(raw) : []); } catch { setHouseholdMembers([]); }
   }, [user?.id]);
+
+  // Persist per-user data
+  useEffect(() => { if (user) localStorage.setItem(getUserKey("travel"), JSON.stringify(travelItinerary)); }, [travelItinerary, user?.id]);
+  useEffect(() => { if (user) localStorage.setItem(getUserKey("bills"), JSON.stringify(bills)); }, [bills, user?.id]);
+  useEffect(() => { if (user) localStorage.setItem(getUserKey("groceries"), JSON.stringify(groceries)); }, [groceries, user?.id]);
+  useEffect(() => { if (user) localStorage.setItem(getUserKey("schedule"), JSON.stringify(schedule)); }, [schedule, user?.id]);
+  useEffect(() => { if (user) localStorage.setItem(getUserKey("prefs"), JSON.stringify(userPreferences)); }, [userPreferences, user?.id]);
+  useEffect(() => { if (user) localStorage.setItem(`llama_members_${user.id}`, JSON.stringify(householdMembers)); }, [householdMembers, user?.id]);
 
   const logBoxRef = useRef(null);
 
@@ -176,19 +188,6 @@ export default function App() {
   const [hasConnected, setHasConnected] = useState(false);
   const requestInFlight = useRef(false);
   const feedbackRef = useRef(null);
-
-  // Auth & Household state
-  const [user, setUser] = useState(null);
-  const [household, setHousehold] = useState(null);
-  const [householdMembers, setHouseholdMembers] = useState(() => {
-    try { const raw = localStorage.getItem(`llama_members_${user?.id || "guest"}`); return raw ? JSON.parse(raw) : []; } catch { return []; }
-  });
-  const [showHouseholdSetup, setShowHouseholdSetup] = useState(false);
-  const [householdName, setHouseholdName] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
-  const [householdError, setHouseholdError] = useState("");
-  const [newMemberName, setNewMemberName] = useState("");
-  const [newMemberRole, setNewMemberRole] = useState("");
 
   useEffect(() => {
     if (agentError || agentResult || isRunning)
