@@ -9,3 +9,6 @@ dist
 .env.*
 !.env.example
 .vercel
+
+# Local database inventory may reveal private schema names and counts.
+migration-inventory*.json
