@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { Pool } from "pg";
+import { familyAuthOptions } from "../server/family-auth.js";
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || process.env.POSTGRES_URL || process.env.NEON_POSTGRES_URL,
@@ -7,6 +8,7 @@ export const pool = new Pool({
 
 export const auth = betterAuth({
   database: pool,
+  ...familyAuthOptions(pool),
   baseURL:
     process.env.BETTER_AUTH_URL ??
     (process.env.VERCEL_PROJECT_PRODUCTION_URL
@@ -50,6 +52,7 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
+    freshAge: 60 * 5,
   },
   ...(process.env.NODE_ENV === "development"
     ? {

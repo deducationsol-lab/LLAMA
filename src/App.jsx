@@ -23,10 +23,15 @@ import {
   Lock,
   UserPlus,
   LogIn,
-  Crown,
   Gift,
+  Settings as SettingsIcon,
+  HelpCircle,
+  Shield,
 } from "lucide-react";
 import { authClient } from "../lib/auth-client";
+import Settings from "./Settings";
+import InfoPage from "./InfoPage";
+import { familyRequest, disableDevicePush } from "./lib/family-client";
 
 const nowTime = () => new Date().toTimeString().slice(0, 8);
 const uid = () => Date.now() + Math.random().toString(16).slice(2);
@@ -88,23 +93,24 @@ export default function App() {
   const agents = INITIAL_AGENTS;
 
   // Auth & Household state - must be before dashboard data that depends on user
+  const [authMode, setAuthMode] = useState("signin");
+  const [authName, setAuthName] = useState("");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authUsername, setAuthUsername] = useState("");
+  const [helpPage, setHelpPage] = useState(null);
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
   const [user, setUser] = useState(null);
   const [household, setHousehold] = useState(null);
   const [householdMembers, setHouseholdMembers] = useState([]);
-  const [showHouseholdSetup, setShowHouseholdSetup] = useState(false);
-  const [householdName, setHouseholdName] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
-  const [householdError, setHouseholdError] = useState("");
-  const [newMemberName, setNewMemberName] = useState("");
-  const [newMemberRole, setNewMemberRole] = useState("");
+  const [family, setFamily] = useState({ household: null, members: [], reminders: [], invites: [] });
+  const [familyError, setFamilyError] = useState("");
+  const [familyNotice, setFamilyNotice] = useState("");
+  const [familyBusy, setFamilyBusy] = useState(false);
+  const workspaceRequest = useRef(0);
+  const [sharedRevision, setSharedRevision] = useState(0);
 
-  const getUserKey = (key) => user ? `llama_${user.id}_${key}` : `llama_guest_${key}`;
-  const loadUserData = (key, fallback) => {
-    try {
-      const raw = localStorage.getItem(getUserKey(key));
-      return raw ? JSON.parse(raw) : fallback;
-    } catch { return fallback; }
-  };
   const [travelItinerary, setTravelItinerary] = useState(INITIAL_TRAVEL);
   const [bills, setBills] = useState(INITIAL_BILLS);
   const [groceries, setGroceries] = useState(INITIAL_GROCERIES);
@@ -118,27 +124,42 @@ export default function App() {
     travelBudgetLimit: 1500,
   });
 
-  // Load per-user data when user signs in
+  const applySharedData = (data = {}) => {
+    setTravelItinerary(data.travel || []);
+    setBills(data.bills || []);
+    setGroceries(data.groceries || []);
+    setSchedule(data.schedule || []);
+    setUserPreferences({ familySize: 4, monthlyBudgetCap: 5000, dietary: "Halal / Low-Sugar", homeLocation: "Kuala Lumpur", targetSleepDuration: "8 Hours", travelBudgetLimit: 1500, ...data.prefs });
+  };
+  const runFamily = async (input, applyData = false) => {
+    const request = ++workspaceRequest.current;
+    setFamilyBusy(true); setFamilyError(""); setFamilyNotice("");
+    try {
+      const result = await familyRequest(input);
+      if (request !== workspaceRequest.current) return null;
+      setFamily(result); setHousehold(result.household); setHouseholdMembers(result.members);
+      if (applyData || ["create", "join", "leave", "delete-household"].includes(input?.action)) {
+        applySharedData(result.household?.data); setSharedRevision(result.household?.revision || 0);
+      } else if (input?.action === "save") {
+        setSharedRevision(result.household.revision); setFamilyNotice("Household changes saved.");
+      }
+      return result;
+    } catch (err) { if (request === workspaceRequest.current) setFamilyError(err.message); return null; }
+    finally { if (request === workspaceRequest.current) setFamilyBusy(false); }
+  };
+  const refreshFamily = async () => {
+    const { data, error } = await authClient.getSession();
+    if (error) throw new Error(error.message);
+    if (data?.user) setUser(data.user);
+    return runFamily();
+  };
   useEffect(() => {
-    if (!user) return;
-    setTravelItinerary(loadUserData("travel", INITIAL_TRAVEL));
-    setBills(loadUserData("bills", INITIAL_BILLS));
-    setGroceries(loadUserData("groceries", INITIAL_GROCERIES));
-    setSchedule(loadUserData("schedule", INITIAL_SCHEDULE));
-    setUserPreferences(loadUserData("prefs", {
-      familySize: 4, monthlyBudgetCap: 5000, dietary: "Halal / Low-Sugar",
-      homeLocation: "Kuala Lumpur", targetSleepDuration: "8 Hours", travelBudgetLimit: 1500,
-    }));
-    try { const raw = localStorage.getItem(`llama_members_${user.id}`); setHouseholdMembers(raw ? JSON.parse(raw) : []); } catch { setHouseholdMembers([]); }
+    workspaceRequest.current++;
+    setFamily({ household: null, members: [], reminders: [], invites: [] });
+    setHousehold(null); setHouseholdMembers([]); applySharedData(); setLogs([]); setFamilyBusy(false); setFamilyError(""); setFamilyNotice("");
+    if (user && user.id !== "guest") runFamily(undefined, true);
+    return () => { workspaceRequest.current++; };
   }, [user?.id]);
-
-  // Persist per-user data
-  useEffect(() => { if (user) localStorage.setItem(getUserKey("travel"), JSON.stringify(travelItinerary)); }, [travelItinerary, user?.id]);
-  useEffect(() => { if (user) localStorage.setItem(getUserKey("bills"), JSON.stringify(bills)); }, [bills, user?.id]);
-  useEffect(() => { if (user) localStorage.setItem(getUserKey("groceries"), JSON.stringify(groceries)); }, [groceries, user?.id]);
-  useEffect(() => { if (user) localStorage.setItem(getUserKey("schedule"), JSON.stringify(schedule)); }, [schedule, user?.id]);
-  useEffect(() => { if (user) localStorage.setItem(getUserKey("prefs"), JSON.stringify(userPreferences)); }, [userPreferences, user?.id]);
-  useEffect(() => { if (user) localStorage.setItem(`llama_members_${user.id}`, JSON.stringify(householdMembers)); }, [householdMembers, user?.id]);
 
   const logBoxRef = useRef(null);
 
@@ -198,20 +219,8 @@ export default function App() {
   useEffect(() => {
     authClient.getSession().then(({ data }) => {
       setUser(data?.user ?? null);
-      if (data?.user) fetchHousehold(data.user.id);
-    });
+    }).catch(() => setAuthError("Session check failed. Please sign in again."));
   }, []);
-
-  const fetchHousehold = async (userId) => {
-    // Household stored locally for now - instant, no DB required
-    const saved = localStorage.getItem(`household_${userId}`);
-    if (saved) {
-      setHousehold(JSON.parse(saved));
-      setShowHouseholdSetup(false);
-    } else {
-      setShowHouseholdSetup(true);
-    }
-  };
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -223,21 +232,22 @@ export default function App() {
           email: authEmail,
           password: authPassword,
           name: authName || authEmail.split("@")[0],
+          ...(authUsername ? { username: authUsername } : {}),
         });
         if (error) throw new Error(error.message);
         // Instant signup - no email confirmation needed!
-        const { data } = await authClient.getSession();
-        setUser(data?.user ?? null);
-        if (data?.user) fetchHousehold(data.user.id);
+        const { data, error: sessionError } = await authClient.getSession();
+        if (sessionError || !data?.user) throw new Error(sessionError?.message || "Sign in again to finish account setup.");
+        setUser(data.user);
       } else {
-        const { error } = await authClient.signIn.email({
-          email: authEmail,
-          password: authPassword,
-        });
+        const credentials = authEmail.includes("@")
+          ? { email: authEmail, password: authPassword }
+          : { username: authEmail, password: authPassword };
+        const { error } = await (authEmail.includes("@") ? authClient.signIn.email(credentials) : authClient.signIn.username(credentials));
         if (error) throw new Error(error.message);
-        const { data } = await authClient.getSession();
-        setUser(data?.user ?? null);
-        if (data?.user) fetchHousehold(data.user.id);
+        const { data, error: sessionError } = await authClient.getSession();
+        if (sessionError || !data?.user) throw new Error(sessionError?.message || "Sign in again to finish account setup.");
+        setUser(data.user);
       }
     } catch (err) {
       setAuthError(err.message);
@@ -246,41 +256,18 @@ export default function App() {
     }
   };
 
+  const resetAccount = () => {
+    workspaceRequest.current++;
+    setUser(null); setHousehold(null); setHouseholdMembers([]); applySharedData(); setLogs([]);
+    setAuthPassword(""); setAuthEmail(""); setAuthName(""); setAuthUsername(""); setAuthError(""); setActiveTab("feeds");
+  };
   const handleSignOut = async () => {
-    await authClient.signOut();
-    setUser(null);
-    setHousehold(null);
-  };
-
-  const handleCreateHousehold = async (e) => {
-    e.preventDefault();
-    if (!user) return;
-    setHouseholdError("");
-    try {
-      const newHousehold = { id: `hh_${Date.now()}`, name: householdName };
-      localStorage.setItem(`household_${user.id}`, JSON.stringify(newHousehold));
-      setHousehold(newHousehold);
-      setShowHouseholdSetup(false);
-      setHouseholdName("");
-    } catch (err) {
-      setHouseholdError(err.message);
+    if (user?.id !== "guest") {
+      await disableDevicePush();
+      const { error } = await authClient.signOut();
+      if (error) throw new Error(error.message);
     }
-  };
-
-  const handleJoinHousehold = async (e) => {
-    e.preventDefault();
-    if (!user) return;
-    setHouseholdError("");
-    try {
-      // Simple invite code - in production, validate against server
-      const newHousehold = { id: inviteCode, name: "Joined Household" };
-      localStorage.setItem(`household_${user.id}`, JSON.stringify(newHousehold));
-      setHousehold(newHousehold);
-      setShowHouseholdSetup(false);
-      setInviteCode("");
-    } catch (err) {
-      setHouseholdError(err.message);
-    }
+    resetAccount();
   };
 
   const checkConnection = async (signal) => {
@@ -447,12 +434,15 @@ export default function App() {
     },
     { id: "schedule", label: "Daily routine", icon: Clock },
     { id: "lab", label: "Memory lab", icon: Brain },
+    { id: "settings", label: "Settings", icon: SettingsIcon },
+    { id: "faq", label: "FAQ", icon: HelpCircle },
+    { id: "privacy", label: "Privacy policy", icon: Shield },
   ];
   const currentTab = TABS.find((tab) => tab.id === activeTab);
 
   // Auth gate - show welcome screen if not logged in
   const showAuthGate = !user;
-  const showHouseholdGate = user && showHouseholdSetup;
+  if (helpPage) return <div className="public-info"><InfoPage page={helpPage} onBack={() => setHelpPage(null)} /></div>;
 
   if (showAuthGate) {
     return (
@@ -498,13 +488,15 @@ export default function App() {
                 </div>
               </div>
             )}
+            {authMode === "signup" && <div className="auth-field"><label htmlFor="auth-username">Username (use the one assigned by your family anchor)</label><input id="auth-username" value={authUsername} onChange={e => setAuthUsername(e.target.value)} pattern="[A-Za-z0-9_.]{3,30}" minLength={3} maxLength={30} autoComplete="username" placeholder="Optional for a new family anchor" /></div>}
             <div className="auth-field">
-              <label htmlFor="auth-email">Email</label>
+              <label htmlFor="auth-email">{authMode === "signup" ? "Email" : "Email or username"}</label>
               <div className="input-wrap">
                 <Mail size={16} />
                 <input
                   id="auth-email"
-                  type="email"
+                  type={authMode === "signup" ? "email" : "text"}
+                  autoComplete="username"
                   value={authEmail}
                   onChange={(e) => setAuthEmail(e.target.value)}
                   placeholder="you@example.com"
@@ -521,9 +513,9 @@ export default function App() {
                   type="password"
                   value={authPassword}
                   onChange={(e) => setAuthPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="At least 8 characters"
                   required
-                  minLength={6}
+                  minLength={authMode === "signup" ? 8 : undefined}
                 />
               </div>
             </div>
@@ -541,8 +533,7 @@ export default function App() {
             className="button ghost auth-guest"
             onClick={() => {
               // Guest mode - set a dummy user to bypass auth
-              setUser({ id: "guest", email: "guest@llama.local" });
-              setHousehold({ id: "guest-household", name: "Demo Household" });
+              setUser({ id: "guest", email: "guest@llama.local", name: "Guest" });
             }}
           >
             Continue as guest · Try LLAMA free
@@ -551,6 +542,7 @@ export default function App() {
           <p className="auth-footnote">
             Connect your household to save and share with family.
           </p>
+          <div className="settings-row"><button className="button ghost" onClick={() => setHelpPage("faq")}>FAQ</button><button className="button ghost" onClick={() => setHelpPage("privacy")}>Privacy policy</button></div>
         </div>
 
         <div className="auth-features">
@@ -590,67 +582,6 @@ export default function App() {
     );
   }
 
-  if (showHouseholdGate) {
-    return (
-      <div className="auth-shell">
-        <div className="auth-card">
-          <div className="auth-header">
-            <Home size={32} />
-            <h1>Connect your household</h1>
-            <p>One household, shared everywhere. Free forever.</p>
-          </div>
-
-          <form onSubmit={handleCreateHousehold} className="auth-form">
-            <h3><Crown size={16} /> Create a new household</h3>
-            <div className="auth-field">
-              <label htmlFor="household-name">Household name</label>
-              <div className="input-wrap">
-                <Home size={16} />
-                <input
-                  id="household-name"
-                  value={householdName}
-                  onChange={(e) => setHouseholdName(e.target.value)}
-                  placeholder="e.g. The Ahmad Family"
-                  required
-                />
-              </div>
-            </div>
-            <button type="submit" className="button primary auth-submit">
-              Create household
-            </button>
-          </form>
-
-          <div className="auth-divider"><span>or</span></div>
-
-          <form onSubmit={handleJoinHousehold} className="auth-form">
-            <h3><Users size={16} /> Join with invite code</h3>
-            <div className="auth-field">
-              <label htmlFor="invite-code">Invite code</label>
-              <div className="input-wrap">
-                <Mail size={16} />
-                <input
-                  id="invite-code"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  placeholder="Paste invite code"
-                  required
-                />
-              </div>
-            </div>
-            <button type="submit" className="button dark auth-submit">
-              Join household
-            </button>
-          </form>
-
-          {householdError && <p className="auth-error" role="alert">{householdError}</p>}
-
-          <button className="button ghost" onClick={handleSignOut} style={{ marginTop: 16, width: "100%" }}>
-            <LogOut size={16} /> Sign out
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="app-shell">
@@ -716,7 +647,7 @@ export default function App() {
             </small>
           </div>
           {user && user.id !== "guest" && (
-            <button className="icon-button" onClick={handleSignOut} aria-label="Sign out" title="Sign out">
+            <button className="icon-button" onClick={() => handleSignOut().catch(err => { setFamilyError(err.message); setActiveTab("settings"); })} aria-label="Sign out" title="Sign out">
               <LogOut size={16} />
             </button>
           )}
@@ -767,6 +698,13 @@ export default function App() {
             </button>
           </section>
 
+          {activeTab === "settings" ? <Settings user={user} family={family} error={familyError} busy={familyBusy} run={runFamily} refresh={refreshFamily} onLogout={handleSignOut} onDeleted={resetAccount} onHelp={setActiveTab} /> : ["faq", "privacy"].includes(activeTab) ? <InfoPage page={activeTab} /> : <>
+          {user?.id !== "guest" && <div className="panel shared-banner">
+            <div><strong>{household ? `Shared with ${household.name}` : "Connect your household"}</strong><p>{household ? "Save publishes all current lists and preferences. Refresh replaces unsaved edits with the latest shared version." : "Create or join a household in Settings. Data here is not shared until you save it."}</p></div>
+            <div className="settings-row"><button className="button" onClick={() => setActiveTab("settings")}>Household settings</button>{household && <><button className="button" disabled={familyBusy} onClick={() => { if (window.confirm("Replace unsaved edits with the latest shared household data?")) runFamily(undefined, true); }}>Refresh shared data</button><button className="button primary" disabled={familyBusy} onClick={() => runFamily({ action: "save", revision: sharedRevision, data: { travel: travelItinerary, bills, groceries, schedule, prefs: userPreferences } })}>Save household changes</button></>}</div>
+            {familyError && <p className="auth-error" role="alert">{familyError}</p>}
+            {familyNotice && <p role="status">{familyNotice}</p>}
+          </div>}
           <section className="stats-grid" aria-label="Household summary">
             {[
               {
@@ -1513,29 +1451,9 @@ export default function App() {
                   <label>Travel budget (RM) <input type="number" min="0" value={userPreferences.travelBudgetLimit} onChange={e => setUserPreferences(p => ({...p, travelBudgetLimit: Number(e.target.value) || 0}))} /></label>
                 </div>
                 <div className="panel" style={{marginBottom:16}}>
-                  <h3 style={{marginBottom:12}}>Household members</h3>
-                  <form className="grocery-form" onSubmit={(e) => {
-                    e.preventDefault();
-                    if (!newMemberName.trim()) return;
-                    setHouseholdMembers(prev => [...prev, { id: uid(), name: newMemberName.trim(), role: newMemberRole.trim() || "Member" }]);
-                    setNewMemberName(""); setNewMemberRole("");
-                  }}>
-                    <input value={newMemberName} onChange={e => setNewMemberName(e.target.value)} placeholder="Name (e.g. Aisha)" required style={{flex:2}} />
-                    <input value={newMemberRole} onChange={e => setNewMemberRole(e.target.value)} placeholder="Role (e.g. Parent, Child)" style={{flex:1}} />
-                    <button className="button primary"><Plus size={16} /> Add</button>
-                  </form>
-                  {householdMembers.length === 0 ? (
-                    <p style={{opacity:0.6,marginTop:12}}>No members yet — add your household tree above.</p>
-                  ) : (
-                    <div style={{display:"grid",gap:8,marginTop:12}}>
-                      {householdMembers.map(m => (
-                        <div key={m.id} className="panel" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px"}}>
-                          <span><strong>{m.name}</strong> · {m.role}</span>
-                          <button className="icon-button delete-button" onClick={() => setHouseholdMembers(p => p.filter(x => x.id !== m.id))}><Trash2 size={14} /></button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <h3>Household members</h3>
+                  <p>{householdMembers.length ? householdMembers.map(m => m.name).join(", ") : "No shared household connected."}</p>
+                  <button className="button ghost" onClick={() => setActiveTab("settings")}>Manage members in Settings</button>
                 </div>
                 <pre>{`// EVERYDAY LIFE SWARM
 You are the household orchestrator.
@@ -1547,7 +1465,7 @@ dietary: ${userPreferences.dietary}
 sleep_target: ${userPreferences.targetSleepDuration}
 monthly_cap: ${rm(userPreferences.monthlyBudgetCap)}
 travel_cap: ${rm(userPreferences.travelBudgetLimit)}
-members: ${householdMembers.map(m => `${m.name} (${m.role})`).join(", ") || "none yet"}
+members: ${householdMembers.map(m => `${m.name}`).join(", ") || "none yet"}
 
 // A LITTLE LESS FRICTION
 1. Align trips with school calendars & budgets.
@@ -1557,6 +1475,7 @@ members: ${householdMembers.map(m => `${m.name} (${m.role})`).join(", ") || "non
               </div>
             </section>
           )}
+          </>}
         </main>
         <footer className="footer">
           <span>

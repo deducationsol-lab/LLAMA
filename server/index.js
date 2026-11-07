@@ -1,9 +1,12 @@
 import { createServer } from "node:http";
 import handler from "../api/agent.js";
-import { auth } from "./auth.js";
+import { auth, pool } from "./auth.js";
+import { createFamilyHandler } from "./family-handler.js";
+const familyHandler = createFamilyHandler(auth, pool);
 
 // Local companion to Vite; on Vercel the same handler lives at /api/agent.
 const server = createServer(async (req, res) => {
+  if (req.url?.split("?")[0] === "/api/family") return familyHandler(req, res);
   if (req.url?.split("?")[0] === "/api/agent") return handler(req, res);
   if (req.url?.startsWith("/api/auth")) {
     let body = "";
