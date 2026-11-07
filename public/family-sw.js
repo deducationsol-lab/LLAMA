@@ -7,12 +7,25 @@ self.addEventListener("push", (event) => {
   }
   if (!data) return;
   event.waitUntil(
-    self.registration.showNotification("LLAMA household", {
-      body: data.body || "Open LLAMA to view your household update.",
-      icon: "/llama-logo.png",
-      tag: "llama-household",
-      data: { url: "/" },
-    }),
+    (async () => {
+      let sound = true;
+      try {
+        const preference = await (
+          await caches.open("llama-device-preferences-v1")
+        ).match("/__llama_notification_sound");
+        if (preference) sound = (await preference.json()).enabled !== false;
+      } catch {
+        /* Storage failure must not suppress a household alert. */
+      }
+      return self.registration.showNotification("LLAMA household", {
+        body: data.body || "Open LLAMA to view your household update.",
+        icon: "/llama-logo.png",
+        tag: "llama-household",
+        renotify: true,
+        silent: !sound,
+        data: { url: "/" },
+      });
+    })(),
   );
 });
 self.addEventListener("notificationclick", (event) => {

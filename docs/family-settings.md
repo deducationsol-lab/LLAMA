@@ -2,6 +2,8 @@
 
 ## Status
 
+See [Neon consolidation](neon-consolidation.md) for current backend selection and the blocked Supabase import. The runtime now explicitly selects Neon; generic POSTGRES_URL values are not used.
+
 This change adds feature code and offline checks. It is **not live-ready** until the existing Better Auth database is migrated, Web Push is configured, and the two-account/device checks below pass. It does not reuse the older, unmerged Supabase implementation in PR #2. Do not connect a second authentication database: current accounts use Better Auth/PostgreSQL.
 
 The branch includes the six auth state hooks from PR #6, which production already uses but main has not yet merged. Check overlap before merging.
@@ -18,6 +20,7 @@ The branch includes the six auth state hooks from PR #6, which production alread
 
 The runtime needs these environment variables in the intended environment:
 
+- Existing complete `WEB_PUSH_PUBLIC_KEY` / `WEB_PUSH_PRIVATE_KEY` / `WEB_PUSH_SUBJECT` values are also supported. Do not mix pairs.
 - `VAPID_PUBLIC_KEY`: public application-server key (exposed through `/api/family?config=1`, not a secret).
 - `VAPID_PRIVATE_KEY`: matching private signing key; server only.
 - `VAPID_SUBJECT`: valid `mailto:` contact or HTTPS contact URL controlled by the app operator.

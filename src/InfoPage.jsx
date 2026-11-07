@@ -19,7 +19,7 @@ export default function InfoPage({ page, onBack }) {
           <h2>Accounts and household information</h2>
           <p>
             LLAMA stores your name, email, optional username, password hash and
-            login sessions through Better Auth in the app's PostgreSQL database.
+            login sessions through Better Auth in the app's Neon PostgreSQL database.
             Household names, memberships, invitations, saved lists, preferences
             and reminders are stored there too. Your password is not shared with
             your family anchor.

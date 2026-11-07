@@ -18,7 +18,7 @@ try {
   assert.doesNotMatch(guest, /Permanently delete my account/);
   const user = { id: "anchor", name: "Anchor", username: "anchor_test" };
   const setup = render(Settings, { user, family });
-  for (const text of ["Create a household", "Join your family", "Delete my account"]) assert.ok(setup.includes(text));
+  for (const text of ["Start a new household", "I have an invitation", "Delete my account"]) assert.ok(setup.includes(text));
   family.household = { id: "hh", name: "Test household", ownerId: "anchor" };
   family.members = [user, { id: "member", name: "Member" }];
   const ownerSettings = render(Settings, { user, family });

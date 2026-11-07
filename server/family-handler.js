@@ -1,3 +1,4 @@
+import { pushConfiguration, isPushConfigured } from "./database-config.js";
 import { familyReadiness } from "./family-readiness.js";
 import { fromNodeHeaders } from "better-auth/node";
 import { familyAction, FamilyError } from "./family.js";
@@ -14,12 +15,8 @@ export function createFamilyHandler(auth, pool) {
       if (!["GET", "POST"].includes(req.method))
         return send(405, { error: "Method not allowed." });
       const readiness = await familyReadiness(pool);
-      const configured = readiness.householdReady && !!(
-        process.env.VAPID_PUBLIC_KEY &&
-        process.env.VAPID_PRIVATE_KEY &&
-        process.env.VAPID_SUBJECT &&
-        process.env.CRON_SECRET
-      );
+      const push = pushConfiguration();
+      const configured = readiness.householdReady && isPushConfigured(push);
       if (
         req.method === "GET" &&
         new URL(req.url, "http://local").searchParams.get("config") === "1"
@@ -27,9 +24,13 @@ export function createFamilyHandler(auth, pool) {
         return send(200, {
           ...readiness,
           pushConfigured: configured,
-          publicKey: configured ? process.env.VAPID_PUBLIC_KEY : null,
+          publicKey: configured ? push.publicKey : null,
         });
-      if (!readiness.householdReady) return send(503, { error: "Household setup is pending. Email login, Settings, FAQ and Privacy Policy remain available. The app owner must apply the family settings migration." });
+      if (!readiness.householdReady)
+        return send(503, {
+          error:
+            "Household setup is pending. Email login, Settings, FAQ and Privacy Policy remain available. The app owner must apply the family settings migration.",
+        });
       if (req.method === "POST") {
         const origin = req.headers.origin;
         const expectedHost = req.headers.host;
