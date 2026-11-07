@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import { randomBytes } from "node:crypto";
 import { betterAuth } from "better-auth";
 import { memoryAdapter } from "better-auth/adapters/memory";
+import { familyReadiness } from "../server/family-readiness.js";
 import { familyAuthOptions } from "../server/family-auth.js";
 import { PGlite } from "@electric-sql/pglite";
 import {
@@ -72,12 +73,25 @@ try {
   await db.exec(
     'CREATE TABLE "user" (id text PRIMARY KEY, name text NOT NULL)',
   );
+  const beforeMigration = await familyReadiness(pool);
+  assert.deepEqual(beforeMigration, { usernameReady: false, householdReady: false });
+  const legacyAuth = betterAuth({
+    baseURL: "http://localhost:3000", secret: randomBytes(32).toString("hex"),
+    database: memoryAdapter({ user: [], session: [], account: [], verification: [] }),
+    emailAndPassword: { enabled: true }, ...familyAuthOptions(pool, beforeMigration), logger: { disabled: true },
+  });
+  assert.equal(legacyAuth.options.plugins.length, 0);
+  const legacyPassword = randomBytes(18).toString("base64url");
+  const legacySignup = await legacyAuth.api.signUpEmail({ body: { name: "Legacy", email: "legacy@example.test", password: legacyPassword } });
+  assert.equal((await legacyAuth.api.signInEmail({ body: { email: "legacy@example.test", password: legacyPassword } })).user.id, legacySignup.user.id);
+  await familyAuthOptions(pool, beforeMigration).user.deleteUser.beforeDelete({ id: legacySignup.user.id });
   const migration = await readFile(
     new URL("../migrations/20261107_family_settings.sql", import.meta.url),
     "utf8",
   );
   await db.exec(migration);
   await db.exec(migration); // Safe to re-run.
+  assert.deepEqual(await familyReadiness(pool), { usernameReady: true, householdReady: true });
   for (const user of users)
     await query('INSERT INTO "user"(id,name,username) VALUES($1,$2,$3)', [
       user.id,

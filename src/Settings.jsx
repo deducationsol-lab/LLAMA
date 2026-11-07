@@ -152,6 +152,7 @@ export default function Settings({
               }}
             >
               <label htmlFor="settings-username">Your login username</label>
+              {!pushConfig?.usernameReady && <p className="muted">Username login is pending database setup. Continue using your email to sign in.</p>}
               <p className="muted">
                 Use the username assigned by your anchor before redeeming an
                 invitation. Usernames are unique across LLAMA.
@@ -168,7 +169,7 @@ export default function Settings({
                   required
                   autoComplete="username"
                 />
-                <button className="button" disabled={disabled}>
+                <button className="button" disabled={disabled || !pushConfig?.usernameReady}>
                   Save username
                 </button>
               </div>

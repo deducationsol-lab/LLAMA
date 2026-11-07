@@ -11,7 +11,7 @@ The branch includes the six auth state hooks from PR #6, which production alread
 1. Take a database backup and confirm you are connected to the database used by `DATABASE_URL` (or the existing supported fallback in `lib/auth.ts`). Test in an isolated Preview database first; never point Preview testing at Production.
 2. The existing Better Auth core tables (`user`, `session`, `account`, `verification`) must already exist. This feature does not recreate or reset authentication tables.
 3. Apply `migrations/20261107_family_settings.sql` once using your database provider's SQL client. It is transactional and re-runnable. It adds optional username fields and new `family_*` tables. Use a server-only database role; grant no browser/anonymous table access.
-4. The auth username plugin queries the new columns. Apply the migration **before deploying** this branch to an environment. Without it, existing logins may fail as well as household operations.
+4. The auth username plugin queries the new columns. The compatibility fix checks schema metadata on cold start and enables username login only when both columns exist. Before migration, email login, Settings, FAQ, Privacy Policy and account deletion remain available; household operations return setup pending. Apply the migration and redeploy to activate username login. A schema metadata/connection error is not silently treated as an unmigrated schema.
 5. No old browser-only household is migrated or silently uploaded. Guest data is ephemeral. Signed-in lists load from the shared household; publish edits explicitly with **Save household changes**. Existing local storage remains untouched except known account-specific keys on account deletion from the current device.
 
 ## Web Push setup

@@ -97,6 +97,8 @@ export default function App() {
   const [authName, setAuthName] = useState("");
   const [authEmail, setAuthEmail] = useState("");
   const [authUsername, setAuthUsername] = useState("");
+  const [usernameReady, setUsernameReady] = useState(false);
+  useEffect(() => { fetch("/api/family?config=1").then(r => r.ok ? r.json() : {}).then(config => setUsernameReady(!!config.usernameReady)).catch(() => {}); }, []);
   const [helpPage, setHelpPage] = useState(null);
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
@@ -232,7 +234,7 @@ export default function App() {
           email: authEmail,
           password: authPassword,
           name: authName || authEmail.split("@")[0],
-          ...(authUsername ? { username: authUsername } : {}),
+          ...(usernameReady && authUsername ? { username: authUsername } : {}),
         });
         if (error) throw new Error(error.message);
         // Instant signup - no email confirmation needed!
@@ -240,6 +242,7 @@ export default function App() {
         if (sessionError || !data?.user) throw new Error(sessionError?.message || "Sign in again to finish account setup.");
         setUser(data.user);
       } else {
+        if (!usernameReady && !authEmail.includes("@")) throw new Error("Please sign in with your email. Username login is pending database setup.");
         const credentials = authEmail.includes("@")
           ? { email: authEmail, password: authPassword }
           : { username: authEmail, password: authPassword };
@@ -488,9 +491,9 @@ export default function App() {
                 </div>
               </div>
             )}
-            {authMode === "signup" && <div className="auth-field"><label htmlFor="auth-username">Username (use the one assigned by your family anchor)</label><input id="auth-username" value={authUsername} onChange={e => setAuthUsername(e.target.value)} pattern="[A-Za-z0-9_.]{3,30}" minLength={3} maxLength={30} autoComplete="username" placeholder="Optional for a new family anchor" /></div>}
+            {authMode === "signup" && usernameReady && <div className="auth-field"><label htmlFor="auth-username">Username (use the one assigned by your family anchor)</label><input id="auth-username" value={authUsername} onChange={e => setAuthUsername(e.target.value)} pattern="[A-Za-z0-9_.]{3,30}" minLength={3} maxLength={30} autoComplete="username" placeholder="Optional for a new family anchor" /></div>}
             <div className="auth-field">
-              <label htmlFor="auth-email">{authMode === "signup" ? "Email" : "Email or username"}</label>
+              <label htmlFor="auth-email">{authMode === "signup" || !usernameReady ? "Email" : "Email or username"}</label>
               <div className="input-wrap">
                 <Mail size={16} />
                 <input
