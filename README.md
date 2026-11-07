@@ -2,7 +2,7 @@
 
 ## Family settings rollout
 
-Settings, individual username logins, server-backed households, opt-in push reminders, account deletion, FAQ and Privacy Policy are implemented on this branch. **Database migration, push configuration and hosted verification are required before rollout.** See [family setup and verification](docs/family-settings.md). Guest data is ephemeral; shared edits publish only when saved.
+Settings, individual username logins, server-backed households, opt-in push reminders, account deletion, FAQ and Privacy Policy are implemented on this branch. **Database migration, push configuration and hosted verification are required before rollout.** See [family setup and verification](docs/family-settings.md) and [Neon consolidation status](docs/neon-consolidation.md). Guest data is ephemeral; shared edits publish only when saved.
 
 <p align="center">
   <img src="public/llama-logo.png" alt="LLAMA mascot: a blue llama with orange ears and a lightning-bolt medallion" width="220" height="220" />

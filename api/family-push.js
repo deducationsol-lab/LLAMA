@@ -1,3 +1,7 @@
+import {
+  pushConfiguration,
+  isPushConfigured,
+} from "../server/database-config.js";
 import { timingSafeEqual } from "node:crypto";
 import webpush from "web-push";
 import { pool } from "../lib/auth.js";
@@ -21,18 +25,11 @@ export default async function handler(req, res) {
     !timingSafeEqual(Buffer.from(received), Buffer.from(expected))
   )
     return send(401, { error: "Unauthorized." });
-  if (
-    !process.env.VAPID_PUBLIC_KEY ||
-    !process.env.VAPID_PRIVATE_KEY ||
-    !process.env.VAPID_SUBJECT
-  )
+  const push = pushConfiguration();
+  if (!isPushConfigured(push))
     return send(503, { error: "Push setup is incomplete." });
   try {
-    webpush.setVapidDetails(
-      process.env.VAPID_SUBJECT,
-      process.env.VAPID_PUBLIC_KEY,
-      process.env.VAPID_PRIVATE_KEY,
-    );
+    webpush.setVapidDetails(push.subject, push.publicKey, push.privateKey);
     send(
       200,
       await deliverFamilyPush(pool, (...args) =>

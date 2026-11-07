@@ -1,0 +1,29 @@
+# Consolidate LLAMA on Neon — migration handoff
+
+## Current status (7 November 2026)
+
+Existing Better Auth accounts already use Neon. Production logs show an email sign-in HTTP 200 at 08:42:12 UTC followed by successful session reads; this is not proof of a particular person's identity or that every account works. Family actions returned 503 because the new family schema was not ready. Supabase and Neon are both connected, but a connection does not imply that schemas or data are shared.
+
+This branch explicitly uses `NEON_DATABASE_URL` (fallback `NEON_POSTGRES_URL`) for all current server data. It removes the unused Supabase browser client/package and does NOT disconnect, delete, overwrite or export Supabase data. It accepts the existing `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, `WEB_PUSH_SUBJECT` names, as well as a complete `VAPID_*` configuration. It never mixes key pairs.
+
+**The Supabase-to-Neon data transfer is not complete.** The agent workspace could not connect to either database (EAI_AGAIN). No source inventory, account count comparison, transfer, schema mutation or real-device push delivery was performed. A migration plan cannot safely assume that Supabase is empty or that its Auth users/password hashes use Better Auth's schema/algorithms.
+
+## Safe execution from a database-capable environment
+
+Use a trusted machine/server that can reach both databases. Never paste database credentials, account exports, private push keys or passwords in chat or Git. Set values directly in a local ignored `.env` or your secret manager. Use a read-only source role for inventory.
+
+1. Back up BOTH databases using each provider's backup/export tools. Record a restore point and test that the backup is usable. Keep Supabase online and connected until cutover is verified.
+2. On this branch, install dependencies with `pnpm install --frozen-lockfile`. Provide `NEON_DATABASE_URL` for the intended destination and `SUPABASE_MIGRATION_DATABASE_URL` for the source in your private local environment. Do not replace existing Vercel connection values during inventory.
+3. Run `node --env-file=.env.migration scripts/neon-readiness.mjs > migration-inventory.json`. The script performs read-only schema/count queries, not account data export. Review privately. If a role cannot read source auth tables, use the source provider's supported admin export instead. Missing tables/permissions are not evidence of zero users. Counts and schema may be shared only after reviewing for sensitive/custom names; never share rows, hashes or credentials.
+4. If Neon is the existing auth database (the destination must already have Better Auth's core user/session/account/verification tables), apply the new family schema **only after backup**: set `CONFIRM_NEON_FAMILY_MIGRATION=yes` in your local environment and run `node --env-file=.env.migration scripts/neon-readiness.mjs --apply-family-schema`. This adds optional username fields and family tables; it does not transfer Supabase rows. Check both readiness booleans are true. Rollback on SQL errors is provided by the migration's transaction. Do not recreate/reset core auth tables.
+5. Before any Supabase import, design an explicit table/column mapping from the inventory. Preserve IDs or maintain a durable ID mapping for foreign keys. Resolve duplicate emails/usernames explicitly; do not merge identities simply because emails match. Import dependent records in a transaction/staging tables, not blind `INSERT ... SELECT` into production.
+6. Supabase Auth users, identities, password hashes, refresh tokens and sessions are NOT drop-in Better Auth rows. Use a supported identity/password migration with verified algorithms and account ownership, or a controlled password-reset/re-enrolment flow. Never copy active sessions or force-reset existing Neon accounts. Verify both existing Neon accounts and migrated accounts; the agent has not yet designed or executed this mapping because the source schema/data is inaccessible.
+7. Freeze Supabase writes for final export or reconcile a change log; validate source/destination counts, per-table checksums, foreign keys, household membership, ownership and duplicate handling before cutover. Test with two disposable member accounts and an outsider. Preserve a rollback path and migration audit without credentials.
+8. Deploy this branch ONLY after the Neon schema test passes; redeploy is required for the auth readiness gate to refresh. Confirm existing email/password login, username signup/login, create/join/invite, shared-save conflicts, deletion guards and two-device notifications. Each member must independently enable push; website sound cannot override OS mute/Do Not Disturb.
+9. Only after signoff, remove unused Supabase runtime variables/connection in a separately reviewed change. This branch deliberately leaves them intact to avoid losing access to source data. Rotate retired credentials after retention/rollback requirements are satisfied.
+
+## User experience
+
+Settings starts with Create or join → Invite family → Enable alerts. A family anchor can create a household without choosing a username. A joining member enters their invitation username and code together; the app saves that username before redeeming the invite (a failed join does not roll back the username change). Missing schema disables create/join instead of letting members repeatedly submit failing forms. Advanced username changes stay collapsed for connected members.
+
+Every opted-in household member receives generic update/reminder pushes, including the sender. A per-device sound switch and local test alert use the browser's notification API. Sound defaults on for incoming pushes unless explicitly muted on that device. The OS selects the sound; a website cannot guarantee audible alerts or choose a custom ringtone. A local test is not evidence that the remote push worker delivers successfully.

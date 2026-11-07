@@ -1,4 +1,9 @@
 import React, { useEffect, useState } from "react";
+import {
+  getNotificationSound,
+  setNotificationSound,
+  testDeviceNotification,
+} from "./lib/notification-sound";
 import { authClient } from "../lib/auth-client";
 import {
   clearAccountStorage,
@@ -18,6 +23,9 @@ export default function Settings({
   onDeleted,
   onHelp,
 }) {
+  const [mode, setMode] = useState("create");
+  const [soundOn, setSoundOn] = useState(true);
+  const [joinUsername, setJoinUsername] = useState("");
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [username, setUsername] = useState("");
@@ -42,6 +50,11 @@ export default function Settings({
   const disabled = busy || working;
   useEffect(() => {
     let live = true;
+    getNotificationSound()
+      .then((value) => {
+        if (live) setSoundOn(value);
+      })
+      .catch(() => {});
     fetch("/api/family?config=1", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((data) => {
@@ -100,7 +113,7 @@ export default function Settings({
   }
   return (
     <section className="settings-grid">
-      {(error || localError) && (
+      {(localError || (error && pushConfig?.householdReady !== false)) && (
         <div className="settings-status">
           <p className="auth-error" role="alert">
             {localError || error}
@@ -124,9 +137,14 @@ export default function Settings({
       <div className="panel settings-panel">
         <h2>Household settings</h2>
         <p>
-          Separate logins, one shared household. Up to 20 members. The family
-          anchor assigns usernames; passwords stay private.
+          One place for your family’s lists and reminders. Everyone keeps their
+          own account and password.
         </p>
+        <ol className="setup-steps" aria-label="Household setup steps">
+          <li>Create or join</li>
+          <li>Invite your family</li>
+          <li>Enable alerts on each phone</li>
+        </ol>
         {guest ? (
           <p>
             You're using a guest session.{" "}
@@ -140,98 +158,155 @@ export default function Settings({
               Signed in as <strong>{user.name}</strong>
               {user.username && <> · @{user.username}</>}
             </p>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                act(async () => {
-                  const { error } = await authClient.updateUser({ username });
-                  if (error) throw new Error(error.message);
-                  setUsername("");
-                  await refresh();
-                }, "Username saved. Use it the next time you sign in.");
-              }}
-            >
-              <label htmlFor="settings-username">Your login username</label>
-              {!pushConfig?.usernameReady && <p className="muted">Username login is pending database setup. Continue using your email to sign in.</p>}
-              <p className="muted">
-                Use the username assigned by your anchor before redeeming an
-                invitation. Usernames are unique across LLAMA.
-              </p>
-              <div className="settings-row">
-                <input
-                  id="settings-username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  pattern="[A-Za-z0-9_.]{3,30}"
-                  minLength={3}
-                  maxLength={30}
-                  placeholder={user.username || "e.g. aisha_family"}
-                  required
-                  autoComplete="username"
-                />
-                <button className="button" disabled={disabled || !pushConfig?.usernameReady}>
-                  Save username
-                </button>
-              </div>
-            </form>
+            {!pushConfig ? (
+              <p role="status">Checking your household connection…</p>
+            ) : (
+              !pushConfig.householdReady && (
+                <div className="setup-pending" role="status">
+                  <h3>Family sharing is not activated yet</h3>
+                  <p>
+                    Your account still works. The app owner needs to finish the
+                    Neon database setup before anyone can create or join a
+                    household. Nothing you enter here will fix that—there is no
+                    need to keep retrying.
+                  </p>
+                  <button
+                    className="button ghost"
+                    disabled={disabled}
+                    onClick={() => act(refresh)}
+                  >
+                    Check again
+                  </button>
+                </div>
+              )
+            )}
             {!h ? (
               <div className="settings-columns">
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    act(() =>
-                      invoke(
-                        { action: "create", name },
-                        "Household created. You are the family anchor.",
-                      ),
-                    );
-                  }}
+                <div
+                  className="settings-row"
+                  role="group"
+                  aria-label="Choose household setup"
                 >
-                  <h3>Create a household</h3>
-                  <label htmlFor="settings-household">Household name</label>
-                  <input
-                    id="settings-household"
-                    value={name}
-                    maxLength={80}
-                    onChange={(e) => setName(e.target.value)}
-                    required
-                  />
-                  <button className="button primary" disabled={disabled}>
-                    Create household
+                  <button
+                    className={`button ${mode === "create" ? "primary" : "ghost"}`}
+                    aria-pressed={mode === "create"}
+                    onClick={() => setMode("create")}
+                  >
+                    Start a new household
                   </button>
-                </form>
-                <form
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    act(async () => {
-                      await invoke(
-                        { action: "join", code },
-                        "You joined the household.",
+                  <button
+                    className={`button ${mode === "join" ? "primary" : "ghost"}`}
+                    aria-pressed={mode === "join"}
+                    onClick={() => setMode("join")}
+                  >
+                    I have an invitation
+                  </button>
+                </div>
+                {mode === "create" ? (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      act(() =>
+                        invoke(
+                          { action: "create", name },
+                          "Household created. You are the family anchor.",
+                        ),
                       );
-                      setCode("");
-                    });
-                  }}
-                >
-                  <h3>Join your family</h3>
-                  <label htmlFor="settings-invite">
-                    One-use invitation code
-                  </label>
-                  <input
-                    id="settings-invite"
-                    value={code}
-                    maxLength={100}
-                    onChange={(e) => setCode(e.target.value)}
-                    required
-                    autoComplete="off"
-                  />
-                  <button className="button primary" disabled={disabled}>
-                    Join household
-                  </button>
-                </form>
+                    }}
+                  >
+                    <h3>1. Name your household</h3>
+                    <p>
+                      You become the family anchor. Next, you can invite family
+                      members. You do not need a new username to create a
+                      household.
+                    </p>
+                    <label htmlFor="settings-household">Household name</label>
+                    <input
+                      id="settings-household"
+                      value={name}
+                      maxLength={80}
+                      onChange={(e) => setName(e.target.value)}
+                      required
+                    />
+                    <button
+                      className="button primary"
+                      disabled={disabled || !pushConfig?.householdReady}
+                    >
+                      Create household
+                    </button>
+                  </form>
+                ) : (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      act(async () => {
+                        if (
+                          joinUsername.trim().toLowerCase() !==
+                          user.username?.toLowerCase()
+                        ) {
+                          const { error } = await authClient.updateUser({
+                            username: joinUsername.trim(),
+                          });
+                          if (error) throw new Error(error.message);
+                          await refresh();
+                        }
+                        await invoke(
+                          { action: "join", code },
+                          "You joined the household.",
+                        );
+                        setCode("");
+                      });
+                    }}
+                  >
+                    <h3>1. Use your family invitation</h3>
+                    <p>
+                      Ask the family anchor for both items below. We’ll save
+                      your assigned username and join the household in one step.
+                    </p>
+                    <label htmlFor="join-username">
+                      Username from your invitation
+                    </label>
+                    <input
+                      id="join-username"
+                      value={joinUsername}
+                      onChange={(e) => setJoinUsername(e.target.value)}
+                      pattern="[A-Za-z0-9_.]{3,30}"
+                      minLength={3}
+                      maxLength={30}
+                      required
+                      placeholder="e.g. farah_family"
+                    />
+                    <label htmlFor="settings-invite">
+                      One-use invitation code
+                    </label>
+                    <input
+                      id="settings-invite"
+                      value={code}
+                      maxLength={100}
+                      onChange={(e) => setCode(e.target.value)}
+                      required
+                      autoComplete="off"
+                    />
+                    <button
+                      className="button primary"
+                      disabled={
+                        disabled ||
+                        !pushConfig?.householdReady ||
+                        !pushConfig?.usernameReady
+                      }
+                    >
+                      Join household
+                    </button>
+                  </form>
+                )}
               </div>
             ) : (
               <>
                 <h3>{h.name}</h3>
+                <p className="household-success">
+                  ✓ Your household is connected. Save list changes from the
+                  dashboard to share them with everyone.
+                </p>
                 <p>
                   Your role:{" "}
                   <strong>{isAnchor ? "Family anchor" : "Member"}</strong>
@@ -308,7 +383,7 @@ export default function Settings({
                       }}
                     >
                       <label htmlFor="assign-username">
-                        Assign a member username
+                        2. Choose a username for your family member
                       </label>
                       <div className="settings-row">
                         <input
@@ -390,6 +465,55 @@ export default function Settings({
                 )}
               </>
             )}
+            {h && (
+              <details className="advanced-settings">
+                <summary>Advanced: change my login username</summary>{" "}
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    act(async () => {
+                      const { error } = await authClient.updateUser({
+                        username,
+                      });
+                      if (error) throw new Error(error.message);
+                      setUsername("");
+                      await refresh();
+                    }, "Username saved. Use it the next time you sign in.");
+                  }}
+                >
+                  <label htmlFor="settings-username">Your login username</label>
+                  {!pushConfig?.usernameReady && (
+                    <p className="muted">
+                      Username login is pending database setup. Continue using
+                      your email to sign in.
+                    </p>
+                  )}
+                  <p className="muted">
+                    Use the username assigned by your anchor before redeeming an
+                    invitation. Usernames are unique across LLAMA.
+                  </p>
+                  <div className="settings-row">
+                    <input
+                      id="settings-username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      pattern="[A-Za-z0-9_.]{3,30}"
+                      minLength={3}
+                      maxLength={30}
+                      placeholder={user.username || "e.g. aisha_family"}
+                      required
+                      autoComplete="username"
+                    />
+                    <button
+                      className="button"
+                      disabled={disabled || !pushConfig?.usernameReady}
+                    >
+                      Save username
+                    </button>
+                  </div>
+                </form>
+              </details>
+            )}
           </>
         )}
       </div>
@@ -425,10 +549,50 @@ export default function Settings({
         >
           Notifications {pushOn ? "On — turn off" : "Off — turn on"}
         </button>
+        <div className="sound-settings">
+          <label>
+            <input
+              type="checkbox"
+              checked={soundOn}
+              disabled={working || guest}
+              onChange={(e) => {
+                const next = e.target.checked;
+                act(
+                  async () => {
+                    await setNotificationSound(next);
+                    setSoundOn(next);
+                  },
+                  next
+                    ? "Sound enabled on this device."
+                    : "Notifications will be silent on this device.",
+                );
+              }}
+            />{" "}
+            Play notification sound on this device
+          </label>
+          <p className="muted">
+            Every opted-in household member receives alerts. Each phone controls
+            its own sound; mute, Do Not Disturb and browser settings still
+            apply. A website cannot force a sound or choose a custom ringtone.
+          </p>
+          <button
+            className="button ghost"
+            disabled={disabled || !pushOn}
+            onClick={() =>
+              act(
+                testDeviceNotification,
+                "Test notification sent to this device. Check your notification centre.",
+              )
+            }
+          >
+            Test this device’s alert
+          </button>
+        </div>
         {!pushConfig?.pushConfigured && (
           <p className="muted">
-            Push service setup is pending. The app owner must configure push
-            keys and the scheduled worker.
+            {!h
+              ? "First create or join a household. Then enable notifications separately on every family member’s phone."
+              : "Alerts are not activated yet. The app owner must finish notification-service setup; you don’t need to change your account."}
           </p>
         )}
         <p className="muted">
