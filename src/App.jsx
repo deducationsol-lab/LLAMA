@@ -112,6 +112,7 @@ export default function App() {
   useEffect(() => { if (user) localStorage.setItem(getUserKey("groceries"), JSON.stringify(groceries)); }, [groceries, user?.id]);
   useEffect(() => { if (user) localStorage.setItem(getUserKey("schedule"), JSON.stringify(schedule)); }, [schedule, user?.id]);
   useEffect(() => { if (user) localStorage.setItem(getUserKey("prefs"), JSON.stringify(userPreferences)); }, [userPreferences, user?.id]);
+  useEffect(() => { if (user) localStorage.setItem(`llama_members_${user.id}`, JSON.stringify(householdMembers)); }, [householdMembers, user?.id]);
 
   // Reload when user changes (fresh dashboard per user)
   useEffect(() => {
@@ -124,6 +125,7 @@ export default function App() {
       familySize: 4, monthlyBudgetCap: 5000, dietary: "Halal / Low-Sugar",
       homeLocation: "Kuala Lumpur", targetSleepDuration: "8 Hours", travelBudgetLimit: 1500,
     }));
+    try { const raw = localStorage.getItem(`llama_members_${user.id}`); setHouseholdMembers(raw ? JSON.parse(raw) : []); } catch { setHouseholdMembers([]); }
   }, [user?.id]);
 
   const logBoxRef = useRef(null);
@@ -178,16 +180,15 @@ export default function App() {
   // Auth & Household state
   const [user, setUser] = useState(null);
   const [household, setHousehold] = useState(null);
-  const [authMode, setAuthMode] = useState("signin"); // signin | signup
-  const [authEmail, setAuthEmail] = useState("");
-  const [authPassword, setAuthPassword] = useState("");
-  const [authName, setAuthName] = useState("");
-  const [authError, setAuthError] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
+  const [householdMembers, setHouseholdMembers] = useState(() => {
+    try { const raw = localStorage.getItem(`llama_members_${user?.id || "guest"}`); return raw ? JSON.parse(raw) : []; } catch { return []; }
+  });
+  const [showHouseholdSetup, setShowHouseholdSetup] = useState(false);
   const [householdName, setHouseholdName] = useState("");
   const [inviteCode, setInviteCode] = useState("");
   const [householdError, setHouseholdError] = useState("");
-  const [showHouseholdSetup, setShowHouseholdSetup] = useState(false);
+  const [newMemberName, setNewMemberName] = useState("");
+  const [newMemberRole, setNewMemberRole] = useState("");
 
   useEffect(() => {
     if (agentError || agentResult || isRunning)
@@ -1504,6 +1505,39 @@ export default function App() {
                   </div>
                   <Terminal size={22} />
                 </div>
+                <div className="prefs-grid" style={{display:"grid",gap:12,marginBottom:16}}>
+                  <label>Family size <input type="number" min="1" value={userPreferences.familySize} onChange={e => setUserPreferences(p => ({...p, familySize: Number(e.target.value) || 1}))} /></label>
+                  <label>Home location <input value={userPreferences.homeLocation} onChange={e => setUserPreferences(p => ({...p, homeLocation: e.target.value}))} placeholder="Kuala Lumpur" /></label>
+                  <label>Dietary <input value={userPreferences.dietary} onChange={e => setUserPreferences(p => ({...p, dietary: e.target.value}))} placeholder="Halal / Low-Sugar" /></label>
+                  <label>Sleep target <input value={userPreferences.targetSleepDuration} onChange={e => setUserPreferences(p => ({...p, targetSleepDuration: e.target.value}))} placeholder="8 Hours" /></label>
+                  <label>Monthly budget (RM) <input type="number" min="0" value={userPreferences.monthlyBudgetCap} onChange={e => setUserPreferences(p => ({...p, monthlyBudgetCap: Number(e.target.value) || 0}))} /></label>
+                  <label>Travel budget (RM) <input type="number" min="0" value={userPreferences.travelBudgetLimit} onChange={e => setUserPreferences(p => ({...p, travelBudgetLimit: Number(e.target.value) || 0}))} /></label>
+                </div>
+                <div className="panel" style={{marginBottom:16}}>
+                  <h3 style={{marginBottom:12}}>Household members</h3>
+                  <form className="grocery-form" onSubmit={(e) => {
+                    e.preventDefault();
+                    if (!newMemberName.trim()) return;
+                    setHouseholdMembers(prev => [...prev, { id: uid(), name: newMemberName.trim(), role: newMemberRole.trim() || "Member" }]);
+                    setNewMemberName(""); setNewMemberRole("");
+                  }}>
+                    <input value={newMemberName} onChange={e => setNewMemberName(e.target.value)} placeholder="Name (e.g. Aisha)" required style={{flex:2}} />
+                    <input value={newMemberRole} onChange={e => setNewMemberRole(e.target.value)} placeholder="Role (e.g. Parent, Child)" style={{flex:1}} />
+                    <button className="button primary"><Plus size={16} /> Add</button>
+                  </form>
+                  {householdMembers.length === 0 ? (
+                    <p style={{opacity:0.6,marginTop:12}}>No members yet — add your household tree above.</p>
+                  ) : (
+                    <div style={{display:"grid",gap:8,marginTop:12}}>
+                      {householdMembers.map(m => (
+                        <div key={m.id} className="panel" style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 12px"}}>
+                          <span><strong>{m.name}</strong> · {m.role}</span>
+                          <button className="icon-button delete-button" onClick={() => setHouseholdMembers(p => p.filter(x => x.id !== m.id))}><Trash2 size={14} /></button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <pre>{`// EVERYDAY LIFE SWARM
 You are the household orchestrator.
 
@@ -1514,6 +1548,7 @@ dietary: ${userPreferences.dietary}
 sleep_target: ${userPreferences.targetSleepDuration}
 monthly_cap: ${rm(userPreferences.monthlyBudgetCap)}
 travel_cap: ${rm(userPreferences.travelBudgetLimit)}
+members: ${householdMembers.map(m => `${m.name} (${m.role})`).join(", ") || "none yet"}
 
 // A LITTLE LESS FRICTION
 1. Align trips with school calendars & budgets.
