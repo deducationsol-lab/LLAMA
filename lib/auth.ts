@@ -1,14 +1,17 @@
 import { betterAuth } from "better-auth";
 import { Pool } from "pg";
+import { familyReadiness } from "../server/family-readiness.js";
 import { familyAuthOptions } from "../server/family-auth.js";
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL || process.env.NEON_DATABASE_URL || process.env.POSTGRES_URL || process.env.NEON_POSTGRES_URL,
 });
 
+const readiness = await familyReadiness(pool);
+
 export const auth = betterAuth({
   database: pool,
-  ...familyAuthOptions(pool),
+  ...familyAuthOptions(pool, readiness),
   baseURL:
     process.env.BETTER_AUTH_URL ??
     (process.env.VERCEL_PROJECT_PRODUCTION_URL

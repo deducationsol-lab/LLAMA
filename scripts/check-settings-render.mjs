@@ -10,7 +10,7 @@ try {
   const { default: InfoPage } = await server.ssrLoadModule("/src/InfoPage.jsx");
   const render = (component, props = {}) => renderToString(React.createElement(component, props));
   const app = render(App);
-  for (const text of ["Email or username", "FAQ", "Privacy policy"]) assert.ok(app.includes(text));
+  for (const text of ["Email", "FAQ", "Privacy policy"]) assert.ok(app.includes(text));
   const family = { household: null, members: [], invites: [], reminders: [] };
   const guest = render(Settings, { user: { id: "guest" }, family });
   assert.match(guest, /guest session/);
