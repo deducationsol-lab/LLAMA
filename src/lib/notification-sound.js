@@ -32,3 +32,25 @@ export async function testDeviceNotification() {
     data: { url: "/" },
   });
 }
+
+let alertAudio;
+// Must be called directly from a user's click; browsers gate custom audio.
+export async function previewLlamaSound() {
+  alertAudio ||= new Audio('/sounds/llama-alert.mp3');
+  alertAudio.currentTime = 0;
+  await alertAudio.play();
+}
+export function listenForHouseholdSound() {
+  if (!('serviceWorker' in navigator)) return () => {};
+  const listener = async event => {
+    if (event.data?.type !== 'llama-household-alert' || document.visibilityState !== 'visible') return;
+    if (!(await getNotificationSound())) return;
+    // No autoplay workaround: if this page has not been unlocked by a click,
+    // let the normal OS notification remain the fallback.
+    if (alertAudio) {
+      try { await previewLlamaSound(); } catch { /* Browser blocked playback. */ }
+    }
+  };
+  navigator.serviceWorker.addEventListener('message', listener);
+  return () => navigator.serviceWorker.removeEventListener('message', listener);
+}
